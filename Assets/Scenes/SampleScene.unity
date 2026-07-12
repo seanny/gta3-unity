@@ -555,8 +555,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8b454a08d7208a4ba9088ca577dfe06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.FileLoader
-  m_IplFile: D:\Games\steamapps\common\Grand Theft Auto 3\data\maps\industNE.ipl
-  m_ImgFile: D:\Games\steamapps\common\Grand Theft Auto 3\models\gta3.img
+  m_GtaDirectory: D:\Games\steamapps\common\Grand Theft Auto 3
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
