@@ -31,10 +31,19 @@ namespace GTA3Unity
                     continue;
                 }
 
-                if(line.StartsWith("IPL"))
+                if(line.StartsWith("IDE"))
+                {
+                    string pathToIdeFile = line.Substring(4);
+                    string finalIdePath = Path.Combine(gtaFolder, pathToIdeFile);
+                    DatManifest.IdeFiles.Add(finalIdePath);
+                    IdeFile.LoadIdeFile(finalIdePath);
+                }
+                else if(line.StartsWith("IPL"))
                 {
                     string pathToIplFile = line.Substring(4);
-                    IplFile.LoadIplFile(Path.Combine(gtaFolder, pathToIplFile));
+                    string finalIplPath = Path.Combine(gtaFolder, pathToIplFile);
+                    DatManifest.IplFiles.Add(finalIplPath);
+                    IplFile.LoadIplFile(finalIplPath);
                 }
             }
         }
