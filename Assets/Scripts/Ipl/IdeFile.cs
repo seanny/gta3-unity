@@ -1,26 +1,28 @@
 using System.IO;
+using GTA3Unity.Dat;
 using UnityEngine;
 
 namespace GTA3Unity.Ipl
 {
-    public enum EOBJType
+    public enum EObjectBreakability
     {
+        None = 0,
         NonBreakable,
         Breakable,
         ComplexBreakable
-    };
+    }
 
-    public enum EObjectTypes
+    public enum EIdeSection
     {
-        None,
+        None = 0,
         Objs,
         Mlo,
-		TObj,
-		Hier,
-		Cars,
-		Peds,
-		Path,
-		FX2D, // "2DFX"
+        TObj,
+        Hier,
+        Cars,
+        Peds,
+        Path,
+        TwoDfx,
         End
     }
 
@@ -28,58 +30,58 @@ namespace GTA3Unity.Ipl
     {
         public static void LoadIdeFile(string pathToIdeFile)
         {
-            EObjectTypes section = EObjectTypes.None;
+            EIdeSection section = EIdeSection.None;
 
             string[] lines = File.ReadAllLines(pathToIdeFile);
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
-                if(line.StartsWith('#'))
+                if (line.StartsWith('#'))
                 {
-                    // Ignore lines that begin with # as these are comments
                     continue;
                 }
 
-                if(line == "end")
+                if (line == "end")
                 {
-                    section = EObjectTypes.None;
+                    section = EIdeSection.None;
                 }
 
-                if(section == EObjectTypes.None)
+                if (section == EIdeSection.None)
                 {
-                    if(line == "objs")
+                    if (line == "objs")
                     {
-                        section = EObjectTypes.Objs;
+                        section = EIdeSection.Objs;
                     }
-                    else if(line == "tobj")
+                    else if (line == "tobj")
                     {
-                        section = EObjectTypes.TObj;
+                        section = EIdeSection.TObj;
                     }
-                    else if(line == "hier")
+                    else if (line == "hier")
                     {
-                        section = EObjectTypes.Hier;
+                        section = EIdeSection.Hier;
                     }
-                    else if(line == "cars")
+                    else if (line == "cars")
                     {
-                        section = EObjectTypes.Cars;
+                        section = EIdeSection.Cars;
                     }
-                    else if(line == "peds")
+                    else if (line == "peds")
                     {
-                        section = EObjectTypes.Peds;
+                        section = EIdeSection.Peds;
                     }
-                    else if(line == "path")
+                    else if (line == "path")
                     {
-                        section = EObjectTypes.Path;
+                        section = EIdeSection.Path;
                     }
-                    else if(line == "2dfx")
+                    else if (line == "2dfx")
                     {
-                        section = EObjectTypes.FX2D;
+                        section = EIdeSection.TwoDfx;
                     }
+
                     continue;
                 }
 
-                switch(section)
+                switch (section)
                 {
-                    case EObjectTypes.Objs:
+                    case EIdeSection.Objs:
                         LoadObject(line);
                         break;
                 }
@@ -89,48 +91,43 @@ namespace GTA3Unity.Ipl
         public static void LoadObject(string line)
         {
             int id;
-            EOBJType objType;
+            EObjectBreakability objectBreakability;
             string model, texture;
-            float[] dist = new float[3];
-            //uint flags; // Are flags really neccesary since Unity can probably do most of this out-of-the-box?
+            float[] distances = new float[3];
             int damaged;
 
-            //Debug.Log(line);
             string[] parts = line.Split(", ");
             id = int.Parse(parts[0]);
             model = parts[1];
             texture = parts[2];
-            objType = (EOBJType)int.Parse(parts[3]);
+            objectBreakability = (EObjectBreakability)int.Parse(parts[3]);
 
-            switch(objType)
+            switch (objectBreakability)
             {
-                case EOBJType.NonBreakable:
-                    dist[0] = float.Parse(parts[4]);
-                    //flags = uint.Parse(parts[5]);
-                    Debug.Log($"{objType}: #{id} Model: {model} Texture: {texture}");
+                case EObjectBreakability.NonBreakable:
+                    distances[0] = float.Parse(parts[4]);
                     break;
-                case EOBJType.Breakable:
-                    dist[0] = float.Parse(parts[4]);
-                    dist[1] = float.Parse(parts[5]);
-                    damaged = dist[0] < dist[1] ? 0 : 1;
-                    //flags = uint.Parse(parts[6]);
-                    Debug.Log($"{objType}: #{id} Model: {model} Texture: {texture} Distance: {dist[0]}, {dist[1]} Damaged: {damaged}");
+
+                case EObjectBreakability.Breakable:
+                    distances[0] = float.Parse(parts[4]);
+                    distances[1] = float.Parse(parts[5]);
+                    damaged = distances[0] < distances[1] ? 0 : 1;
                     break;
-                case EOBJType.ComplexBreakable:
-                    dist[0] = float.Parse(parts[4]);
-                    dist[1] = float.Parse(parts[5]);
-                    dist[2] = float.Parse(parts[6]);
-                    damaged = dist[0] < dist[1] ? (dist[1] < dist[2] ? 0 : 2) : 1;
-                    //flags = uint.Parse(parts[7]);
-                    Debug.Log($"{objType}: #{id} Model: {model} Texture: {texture} Distance: {dist[0]} {dist[1]}, {dist[2]} Damaged: {damaged}");
+
+                case EObjectBreakability.ComplexBreakable:
+                    distances[0] = float.Parse(parts[4]);
+                    distances[1] = float.Parse(parts[5]);
+                    distances[2] = float.Parse(parts[6]);
+                    damaged = distances[0] < distances[1] ? (distances[1] < distances[2] ? 0 : 2) : 1;
                     break;
+
                 default:
-                    Debug.LogWarning("Unknown type");
+                    Debug.LogWarning($"Unknown IDE object breakability '{objectBreakability}' for line '{line}'.");
                     break;
             }
 
             ItemDefinition itemDefinition = new ItemDefinition(id, model, texture);
-            DatManifest.ItemDefinitions.Add(itemDefinition);
+            DatManifest.AddItemDefinition(itemDefinition);
         }
     }
 }

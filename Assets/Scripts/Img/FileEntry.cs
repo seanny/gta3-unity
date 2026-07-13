@@ -4,11 +4,10 @@ using UnityEngine;
 
 namespace GTA3Unity.Img
 {
-    // Credits: mukaschultze
-    public class FileEntry
+    public sealed class FileEntry
     {
         public string FileName { get; private set; }
-        public string FileNameWithoutExtension { get { return Path.GetFileNameWithoutExtension(FileName); } }
+        public string FileNameWithoutExtension => Path.GetFileNameWithoutExtension(FileName);
         public string FilePath { get; private set; }
         public int Offset { get; private set; }
         public int Size { get; private set; }
@@ -16,13 +15,14 @@ namespace GTA3Unity.Img
         {
             get
             {
-                reader.Position = Offset;
-                return reader;
+                m_Reader.Position = Offset;
+                return m_Reader;
             }
         }
 
-        private readonly BufferReader reader;
-        private static readonly Dictionary<BufferReader, int> dependents = new Dictionary<BufferReader, int>();
+        private static readonly Dictionary<BufferReader, int> s_Dependents = new();
+
+        private readonly BufferReader m_Reader;
 
         public FileEntry(string filePath)
         {
@@ -30,8 +30,8 @@ namespace GTA3Unity.Img
             Size = (int)new FileInfo(filePath).Length;
             FilePath = filePath;
             FileName = Path.GetFileName(FilePath);
-            reader = new BufferReader(new FileStream(FilePath, FileMode.Open));
-            dependents[reader] = 1;
+            m_Reader = new BufferReader(new FileStream(FilePath, FileMode.Open));
+            s_Dependents[m_Reader] = 1;
         }
 
         public FileEntry(FileEntry file, string virtualFileName, int offset, int size)
@@ -41,41 +41,37 @@ namespace GTA3Unity.Img
             FilePath = file.FilePath;
             FileName = virtualFileName;
 
-            // // uncomment this to not create new streams for each file
-            // reader = file.reader;
-            // dependents[reader]++;
-            // return; 
-
-            var pos = file.reader.Position;
-            file.reader.Position = Offset;
-            var data = file.reader.ReadBytes(Size);
-            file.reader.Position = pos;
-            reader = new BufferReader(new MemoryStream(data));
+            long position = file.m_Reader.Position;
+            file.m_Reader.Position = Offset;
+            byte[] data = file.m_Reader.ReadBytes(Size);
+            file.m_Reader.Position = position;
+            m_Reader = new BufferReader(new MemoryStream(data));
             Offset = 0;
-            dependents[reader] = 1;
+            s_Dependents[m_Reader] = 1;
         }
 
         ~FileEntry()
         {
-            if (--dependents[reader] > 0)
+            if (--s_Dependents[m_Reader] > 0)
+            {
                 return;
+            }
 
             try
             {
-                dependents.Remove(reader);
-                reader.Dispose();
-                // Log.Message("Closed stream for file: {0}", FilePath);
+                s_Dependents.Remove(m_Reader);
+                m_Reader.Dispose();
             }
-            catch
+            catch (IOException exception)
             {
-                Debug.LogError($"Failed to close stream for file: {FilePath}");
+                Debug.LogError($"Failed to close stream for file '{FilePath}': {exception.Message}");
             }
         }
 
         public byte[] GetData()
         {
-            reader.Position = Offset;
-            return reader.ReadBytes(Size);
+            m_Reader.Position = Offset;
+            return m_Reader.ReadBytes(Size);
         }
     }
 }

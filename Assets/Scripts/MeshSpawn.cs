@@ -113,7 +113,7 @@ namespace GTA3Unity
             s_TemplateMisses++;
 
             string dffName = $"{meshObj.ModelName}.dff";
-            var entry = imgFileToReadFrom[dffName];
+            GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
             DffFile dffFile = new DffFile(entry.GetData());
 
             template = DffMeshConverter.CreateDffTemplate(

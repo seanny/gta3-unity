@@ -1,8 +1,3 @@
-using System.Collections.Generic;
-using UnityEngine;
-using RenderWareIo;
-using RenderWareIo.Structs.Dff;
-
 namespace GTA3Unity.Ipl
 {
     public sealed class ItemDefinition
@@ -11,14 +6,9 @@ namespace GTA3Unity.Ipl
         public string DffName => m_DffName;
         public string TxdName => m_TxdName;
 
-        private int m_Id;
-        private string m_DffName;
-        private string m_TxdName;
-
-        private GameObject m_LoadedObject;
-
-        private byte[] m_DffBytes;
-        private byte[] m_TxdBytes;
+        private readonly int m_Id;
+        private readonly string m_DffName;
+        private readonly string m_TxdName;
 
         public ItemDefinition(int id, string dffName, string txdName)
         {

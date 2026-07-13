@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
-using GTA3Unity.Img;
-using UnityEngine;
 using System.IO;
-using RenderWareIo;
-using ImgFile = GTA3Unity.Img.ImgFile;
-//using IplFile = GTA3Unity.Ipl.IplFile;
 using GTA3Unity.Utility;
+using RenderWareIo;
+using UnityEngine;
 using Material = UnityEngine.Material;
 using IdeObj = RenderWareIo.Structs.Ide.Obj;
+using ImgFile = GTA3Unity.Img.ImgFile;
 
 namespace GTA3Unity
 {
@@ -16,14 +14,19 @@ namespace GTA3Unity
     {
         public ImgFile MainImg => m_MainImg;
 
-        // Temporary varaible to test IPL file loading
-        [SerializeField] private string m_GtaDirectory;
+        [SerializeField]
+        private string m_GtaDirectory;
+
+        [SerializeField]
+        private List<RenderWareIo.DatFile> m_DatFiles = new();
+
+        [SerializeField]
+        private List<IdeObj> m_Objects = new();
+
+        [SerializeField]
+        private List<RenderWareIo.Structs.Ide.Car> m_Cars = new();
 
         private ImgFile m_MainImg;
-        [SerializeField] private List<RenderWareIo.DatFile> m_DatFiles = new();
-        [SerializeField] private List<IdeObj> m_Objects = new();
-        [SerializeField] private List<RenderWareIo.Structs.Ide.Car> m_Cars = new();
-
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
 
@@ -36,14 +39,13 @@ namespace GTA3Unity
             m_DatFiles.Add(new(Path.Combine(m_GtaDirectory, "data", "gta3.dat")));
             MeshSpawn.ClearCache();
 
-            foreach (var dat in m_DatFiles)
+            foreach (RenderWareIo.DatFile dat in m_DatFiles)
             {
-                foreach (var ide in dat.Dat.Ides)
+                foreach (string ide in dat.Dat.Ides)
                 {
-                    string path = Path.Combine(m_GtaDirectory, StringExt.ReplaceInvalidSlash(ide)); // We normalise the path before passing it to IdeFile ctor
+                    string path = Path.Combine(m_GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
-                    //m_Cars.AddRange(ideFile.Ide.Cars);
                 }
             }
 
@@ -59,15 +61,15 @@ namespace GTA3Unity
             int instanceCount = 0;
             int spawnedCount = 0;
             int missingDefinitionCount = 0;
-            var loadTimer = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Stopwatch loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
-            foreach (var dat in m_DatFiles)
+            foreach (RenderWareIo.DatFile dat in m_DatFiles)
             {
-                foreach(var ipl in dat.Dat.Ipls)
+                foreach (string ipl in dat.Dat.Ipls)
                 {
                     string path = Path.Combine(m_GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
                     IplFile iplFile = new(path);
-                    foreach(var inst in iplFile.Ipl.Insts)
+                    foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
                         instanceCount++;
 
@@ -78,7 +80,20 @@ namespace GTA3Unity
                             continue;
                         }
 
-                        if (MeshSpawn.SpawnMesh(meshObj, new Vector3(inst.Position.X, inst.Position.Y, inst.Position.Z), new Quaternion(inst.Rotation.X,inst.Rotation.Y,inst.Rotation.Z,inst.Rotation.W), m_MainImg, m_FallbackMaterial, m_TxdMaterialCache))
+                        Vector3 position = new Vector3(inst.Position.X, inst.Position.Y, inst.Position.Z);
+                        Quaternion rotation = new Quaternion(
+                            inst.Rotation.X,
+                            inst.Rotation.Y,
+                            inst.Rotation.Z,
+                            inst.Rotation.W);
+
+                        if (MeshSpawn.SpawnMesh(
+                                meshObj,
+                                position,
+                                rotation,
+                                m_MainImg,
+                                m_FallbackMaterial,
+                                m_TxdMaterialCache))
                         {
                             spawnedCount++;
                         }

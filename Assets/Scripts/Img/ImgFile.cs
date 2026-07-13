@@ -8,100 +8,153 @@ using UnityEngine;
 
 namespace GTA3Unity.Img
 {
-    // Credits: mukaschultze
-    public class ImgFile : IEnumerable<FileEntry> {
-        public const string IMG_MAIN = "models/gta3.img";
+    public sealed class ImgFile : IEnumerable<FileEntry>
+    {
+        public const string MainImgPath = "models/gta3.img";
 
-        private bool loaded;
-        private int entriesCount;
-        private FileEntry[] entriesArray;
-        private Dictionary<string, FileEntry> entries;
-        private BufferReader reader;
+        private bool m_Loaded;
+        private int m_EntriesCount;
+        private FileEntry[] m_EntriesArray;
+        private Dictionary<string, FileEntry> m_Entries;
 
-        public int EntriesCount { get { if(!loaded) LoadEntries(); return entriesCount; } }
-        public string FilePath { get { return ArchiveFile.FilePath; } }
+        public int EntriesCount
+        {
+            get
+            {
+                if (!m_Loaded)
+                {
+                    LoadEntries();
+                }
+
+                return m_EntriesCount;
+            }
+        }
+
+        public string FilePath => ArchiveFile.FilePath;
 
         public FileEntry ArchiveFile { get; private set; }
-        public FileEntry[] Entries { get { if(!loaded) LoadEntries(); return entriesArray; } }
-        public FileEntry this[int index] { get { if(!loaded) LoadEntries(); return entriesArray[index]; } }
-        public FileEntry this[string fileName] { get { if(!loaded) LoadEntries(); return entries[fileName]; } }
+        public FileEntry[] Entries
+        {
+            get
+            {
+                if (!m_Loaded)
+                {
+                    LoadEntries();
+                }
 
-        public ImgFile(string path) : this(new FileEntry(path)) { }
+                return m_EntriesArray;
+            }
+        }
 
-        public ImgFile(FileEntry file) {
+        public FileEntry this[int index]
+        {
+            get
+            {
+                if (!m_Loaded)
+                {
+                    LoadEntries();
+                }
+
+                return m_EntriesArray[index];
+            }
+        }
+
+        public FileEntry this[string fileName]
+        {
+            get
+            {
+                if (!m_Loaded)
+                {
+                    LoadEntries();
+                }
+
+                return m_Entries[fileName];
+            }
+        }
+
+        public ImgFile(string path)
+            : this(new FileEntry(path))
+        {
+        }
+
+        public ImgFile(FileEntry file)
+        {
             ArchiveFile = file;
         }
 
-        public bool Contains(string fileName) {
-            if(!loaded)
+        public bool Contains(string fileName)
+        {
+            if (!m_Loaded)
+            {
                 LoadEntries();
+            }
 
-            return entries.ContainsKey(fileName);
+            return m_Entries.ContainsKey(fileName);
         }
 
         private void LoadEntries()
         {
-            var dirPath = Path.ChangeExtension(ArchiveFile.FilePath, "dir");
+            string dirPath = Path.ChangeExtension(ArchiveFile.FilePath, "dir");
 
-            if(!File.Exists(dirPath))
+            if (!File.Exists(dirPath))
             {
-                throw new FileNotFoundException(string.Format("There should be a .dir file along the \"{0}\" file", ArchiveFile.FileName), ArchiveFile.FileName);
+                throw new FileNotFoundException(
+                    $"There should be a .dir file alongside '{ArchiveFile.FileName}'.",
+                    ArchiveFile.FileName);
             }
 
-            reader = new BufferReader(new FileStream(dirPath, FileMode.Open));
-            entriesCount = (int)reader.Length / 32;
+            using BufferReader reader = new BufferReader(new FileStream(dirPath, FileMode.Open));
+            m_EntriesCount = (int)reader.Length / 32;
 
-            entries = new Dictionary<string, FileEntry>(entriesCount, StringComparer.OrdinalIgnoreCase);
-            reader.PrewarmBuffer(entriesCount * 32);
+            m_Entries = new Dictionary<string, FileEntry>(m_EntriesCount, StringComparer.OrdinalIgnoreCase);
+            reader.PrewarmBuffer(m_EntriesCount * 32);
 
-            Debug.Log($"Reading {entriesCount} entries from \"{FilePath}\"");
+            Debug.Log($"Reading {m_EntriesCount} entries from '{FilePath}'.");
 
-            for(var i = 0; i < entriesCount; i++)
+            for (int entryIndex = 0; entryIndex < m_EntriesCount; entryIndex++)
             {
-                var pos = reader.ReadInt32() * 2048;
-                var length = reader.ReadInt32() * 2048;
-                var name = reader.ReadBytes(24).GetNullTerminatedString();
+                int position = reader.ReadInt32() * 2048;
+                int length = reader.ReadInt32() * 2048;
+                string name = reader.ReadBytes(24).GetNullTerminatedString();
 
-                if(!entries.ContainsKey(name))
+                if (!m_Entries.ContainsKey(name))
                 {
                     try
                     {
-                        entries.Add(name, new FileEntry(ArchiveFile, name, pos, length));
+                        m_Entries.Add(name, new FileEntry(ArchiveFile, name, position, length));
                     }
-                    catch(Exception err)
+                    catch (Exception exception)
                     {
-                        Debug.LogError($"Fail to add entry \"{name}\" in \"{FilePath}\": {err}");
+                        Debug.LogError($"Failed to add entry '{name}' in '{FilePath}': {exception.Message}");
                     }
                 }
                 else
                 {
-                    Debug.LogError($"Duplicated entry name \"{name}\" in \"{FilePath}\"");
+                    Debug.LogError($"Duplicated entry name '{name}' in '{FilePath}'.");
                 }
             }
 
-            if(entries.Count != entriesCount)
+            if (m_Entries.Count != m_EntriesCount)
             {
-                Debug.LogWarning($"Expected {entriesCount} entries, found {entries.Count} at \"{FilePath}\"");
+                Debug.LogWarning($"Expected {m_EntriesCount} entries, found {m_Entries.Count} at '{FilePath}'.");
             }
             else
             {
-                Debug.Log("Loaded {entriesCount} entries at \"{FilePath}\"");
+                Debug.Log($"Loaded {m_EntriesCount} entries at '{FilePath}'.");
             }
 
-            reader.Dispose(); //Dispose the DIR file, not the IMG
-
-            entriesArray = entries.Values.ToArray();
-            loaded = true;
+            m_EntriesArray = m_Entries.Values.ToArray();
+            m_Loaded = true;
         }
 
         public static ImgFile GetMainImg()
         {
-            return new ImgFile(IMG_MAIN);
+            return new ImgFile(MainImgPath);
         }
 
         public static ImgFile GetMainImg(string gtaPath)
         {
-            return new ImgFile(Path.Combine(gtaPath, IMG_MAIN));
+            return new ImgFile(Path.Combine(gtaPath, MainImgPath));
         }
 
         IEnumerator<FileEntry> IEnumerable<FileEntry>.GetEnumerator()
