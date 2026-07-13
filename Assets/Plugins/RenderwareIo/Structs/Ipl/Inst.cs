@@ -7,41 +7,47 @@ using System.Text;
 
 namespace RenderWareIo.Structs.Ipl
 {
+    [Serializable]
     public struct Inst : IIplEntity<Inst>
     {
-        public int Id { get; set; }
-        public string ModelName { get; set; }
-        public int Interior { get; set; }
-        public Vector3 Position { get; set; }
-        public Quaternion Rotation { get; set; }
-        public int Lod { get; set; }
+        public int Id;
+        public string ModelName;
+        public Vector3 Position;
+        public Vector3 Scale;
+        public Quaternion Rotation;
 
         public Inst Read(string line)
         {
+            
             string[] splits = line.Split(',').Select((split) => split.Trim()).ToArray();
 
             this.Id = int.Parse(splits[0]);
             this.ModelName = splits[1];
-            this.Interior = int.Parse(splits[2]);
+
+            // .ipl seems to X,Z,Y instead of X,Y,Z
             this.Position = new Vector3(
-                float.Parse(splits[3], CultureInfo.InvariantCulture),
+                float.Parse(splits[2], CultureInfo.InvariantCulture),
                 float.Parse(splits[4], CultureInfo.InvariantCulture),
-                float.Parse(splits[5], CultureInfo.InvariantCulture)
+                float.Parse(splits[3], CultureInfo.InvariantCulture)
+            );
+            // Could it be possible that the Scale is always 1,1,1?
+            this.Scale = new Vector3(
+                float.Parse(splits[5], CultureInfo.InvariantCulture),
+                float.Parse(splits[6], CultureInfo.InvariantCulture),
+                float.Parse(splits[7], CultureInfo.InvariantCulture)
             );
             this.Rotation = new Quaternion(
-                float.Parse(splits[6], CultureInfo.InvariantCulture),
-                float.Parse(splits[7], CultureInfo.InvariantCulture),
                 float.Parse(splits[8], CultureInfo.InvariantCulture),
-                float.Parse(splits[9], CultureInfo.InvariantCulture)
+                float.Parse(splits[10], CultureInfo.InvariantCulture),
+                float.Parse(splits[9], CultureInfo.InvariantCulture),
+                float.Parse(splits[11], CultureInfo.InvariantCulture)
             );
-            this.Lod = int.Parse(splits[10]);
-
             return this;
         }
 
         public string Write()
         {
-            return $"{Id},{ModelName},{Interior},{Position.X},{Position.Y},{Position.Z},{Rotation.X},{Rotation.Y},{Rotation.Z},{Rotation.W},{Lod}";
+            return $"{Id},{ModelName},{Position.X},{Position.Y},{Scale.X},{Scale.Y},{Scale.Z},{Position.Z},{Rotation.X},{Rotation.Y},{Rotation.Z},{Rotation.W}";
         }
     }
 }

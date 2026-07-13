@@ -5,6 +5,7 @@ using System.Text;
 
 namespace RenderWareIo.Structs.Ipl
 {
+    [Serializable]
     public struct Ipl
     {
         private string lastHeader;

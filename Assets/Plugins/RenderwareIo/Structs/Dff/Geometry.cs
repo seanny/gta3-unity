@@ -17,6 +17,9 @@ namespace RenderWareIo.Structs.Dff
         public int TriangleCount { get; set; }
         public int VertexCount { get; set; }
         public int MorphTargetCount { get; set; }
+        public float SurfaceAmbient { get; set; }
+        public float SurfaceSpecular { get; set; }
+        public float SurfaceDiffuse { get; set; }
         public List<Color> Colors { get; set; }
         public List<Uv> TexCoords { get; set; }
         public List<Triangle> Triangles { get; set; }
@@ -46,6 +49,9 @@ namespace RenderWareIo.Structs.Dff
             this.TriangleCount = 0;
             this.VertexCount = 0;
             this.MorphTargetCount = 0;
+            this.SurfaceAmbient = 1;
+            this.SurfaceSpecular = 1;
+            this.SurfaceDiffuse = 1;
             this.Colors = new List<Color>();
             this.TexCoords = new List<Uv>();
             this.Triangles = new List<Triangle>();
@@ -64,6 +70,19 @@ namespace RenderWareIo.Structs.Dff
             this.TriangleCount = (int)RenderWareFileHelper.ReadUint32(stream);
             this.VertexCount = (int)RenderWareFileHelper.ReadUint32(stream);
             this.MorphTargetCount = (int)RenderWareFileHelper.ReadUint32(stream);
+
+            if (HasSurfaceProperties())
+            {
+                this.SurfaceAmbient = RenderWareFileHelper.ReadFloat(stream);
+                this.SurfaceSpecular = RenderWareFileHelper.ReadFloat(stream);
+                this.SurfaceDiffuse = RenderWareFileHelper.ReadFloat(stream);
+            }
+            else
+            {
+                this.SurfaceAmbient = 1;
+                this.SurfaceSpecular = 1;
+                this.SurfaceDiffuse = 1;
+            }
 
             if ((this.Flags & 0x08) != 0)
             {
@@ -85,12 +104,17 @@ namespace RenderWareIo.Structs.Dff
             this.Sphere = new Sphere().Read(stream);
             this.ReadMorphTargets(stream);
 
-            // Temporary fix until I figure out what the missing data here is
+            // Move to the end of the geometry struct before reading child chunks.
             stream.Position = start + this.StructHeader.Size + 24;
             this.MaterialList = new MaterialList().Read(stream);
             this.Extension = new Extension().Read(stream);
 
             return this;
+        }
+
+        private bool HasSurfaceProperties()
+        {
+            return this.StructHeader.Marker < 0x34000;
         }
 
         private void ReadMorphTargets(Stream stream)

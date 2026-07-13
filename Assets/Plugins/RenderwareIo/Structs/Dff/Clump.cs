@@ -45,9 +45,23 @@ namespace RenderWareIo.Structs.Dff
         public Clump Read(Stream stream)
         {
             this.Header = new ChunkHeader().Read(stream);
+            long structEnd = stream.Position + this.Header.Size;
+
             this.AtomicCount = (int)RenderWareFileHelper.ReadUint32(stream);
-            this.LightCount = (int)RenderWareFileHelper.ReadUint32(stream);
-            this.CameraCount = (int)RenderWareFileHelper.ReadUint32(stream);
+
+            if (this.Header.Size >= 12)
+            {
+                this.LightCount = (int)RenderWareFileHelper.ReadUint32(stream);
+                this.CameraCount = (int)RenderWareFileHelper.ReadUint32(stream);
+            }
+            else
+            {
+                this.LightCount = 0;
+                this.CameraCount = 0;
+            }
+
+            stream.Position = structEnd;
+
             this.FrameList = new FrameList().Read(stream);
             this.GeometryList = new GeometryList().Read(stream);
             this.Atomics = RenderWareFileHelper.ReadBinaryStructure<Atomic>(stream, this.AtomicCount);
