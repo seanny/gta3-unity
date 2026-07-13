@@ -7,15 +7,15 @@ using UnityEngine;
 using Material = UnityEngine.Material;
 using IdeObj = RenderWareIo.Structs.Ide.Obj;
 using ImgFile = GTA3Unity.Img.ImgFile;
+using GTA3Unity.Core;
 
 namespace GTA3Unity
 {
     public sealed class FileLoader : MonoBehaviour
     {
-        public ImgFile MainImg => m_MainImg;
+        public static FileLoader Instance { get; private set; }
 
-        [SerializeField]
-        private string m_GtaDirectory;
+        public ImgFile MainImg => m_MainImg;
 
         [SerializeField]
         private List<RenderWareIo.DatFile> m_DatFiles = new();
@@ -30,20 +30,28 @@ namespace GTA3Unity
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
 
-        private void Start()
+        void Awake()
+        {
+            if(Instance == null)
+            {
+                Instance = this;
+            }
+        }
+
+        public void Init()
         {
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
-            m_MainImg = new ImgFile(Path.Combine(m_GtaDirectory, "models", "gta3.img"));
+            m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
             m_TxdMaterialCache = new TxdMaterialCache(m_MainImg, m_FallbackMaterial);
-            m_DatFiles.Add(new(Path.Combine(m_GtaDirectory, "data", "default.dat")));
-            m_DatFiles.Add(new(Path.Combine(m_GtaDirectory, "data", "gta3.dat")));
+            m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "default.dat")));
+            m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "gta3.dat")));
             MeshSpawn.ClearCache();
 
             foreach (RenderWareIo.DatFile dat in m_DatFiles)
             {
                 foreach (string ide in dat.Dat.Ides)
                 {
-                    string path = Path.Combine(m_GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
                 }
@@ -67,7 +75,7 @@ namespace GTA3Unity
             {
                 foreach (string ipl in dat.Dat.Ipls)
                 {
-                    string path = Path.Combine(m_GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
                     IplFile iplFile = new(path);
                     foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
