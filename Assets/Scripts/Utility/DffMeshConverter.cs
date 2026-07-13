@@ -19,13 +19,13 @@ public static class DffMeshConverter
     ///     RenderWare Y -> Unity Z
     ///     RenderWare Z -> Unity Y
     ///
-    /// Swapping Y and Z changes the coordinate-system handedness, so the
-    /// triangle winding is reversed below.
+    /// RenderWare triangle indices are emitted in Unity front-face order after
+    /// the coordinate conversion below.
     /// </summary>
     public static Mesh CreateMesh(
         Geometry geometry,
         string meshName,
-        bool flipTextureV = true)
+        bool flipTextureV = false)
     {
         if (geometry == null)
         {
@@ -183,10 +183,18 @@ public static class DffMeshConverter
 
             List<int> indices = trianglesByMaterial[materialIndex];
 
-            // Reverse B and C because ConvertVector swaps the Y and Z axes.
-            indices.Add(indexA);
-            indices.Add(indexC);
-            indices.Add(indexB);
+            if(flipTextureV)
+            {
+                indices.Add(indexA);
+                indices.Add(indexB);
+                indices.Add(indexC);
+            }
+            else
+            {
+                indices.Add(indexA);
+                indices.Add(indexC);
+                indices.Add(indexB);
+            }
         }
 
         mesh.subMeshCount = subMeshCount;
@@ -347,6 +355,30 @@ public static class DffMeshConverter
             instance);
 
         return instance;
+    }
+
+    public static GameObject CreateDffTemplate(
+    DffFile dffFile,
+    string modelName,
+    string txdName,
+    UnityEngine.Material fallbackMaterial,
+    TxdMaterialCache materialCache)
+    {
+        GameObject template = CreateDffGameObject(
+            dffFile,
+            modelName,
+            txdName,
+            materialCache,
+            fallbackMaterial);
+
+        if (template == null)
+        {
+            return null;
+        }
+
+        template.name = $"{modelName}_Template";
+        template.SetActive(false);
+        return template;
     }
 
     public static GameObject SpawnDff(

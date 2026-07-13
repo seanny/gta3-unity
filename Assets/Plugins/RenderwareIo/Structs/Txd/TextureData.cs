@@ -13,9 +13,18 @@ namespace RenderWareIo.Structs.Txd
     {
         public static Dictionary<uint, string> TextureFormats = new Dictionary<uint, string>()
         {
-            [0x00] = "S3TC DXT1",
-            [22] = "RGB32",
-            [21] = "RGBA32",
+            [0] = "UNKNOWN",
+            [20] = "D3DFMT_R8G8B8",
+            [21] = "D3DFMT_A8R8G8B8",
+            [22] = "D3DFMT_X8R8G8B8",
+            [23] = "D3DFMT_R5G6B5",
+            [24] = "D3DFMT_X1R5G5B5",
+            [25] = "D3DFMT_A1R5G5B5",
+            [26] = "D3DFMT_A4R4G4B4",
+            [32] = "D3DFMT_A8B8G8R8",
+            [33] = "D3DFMT_X8B8G8R8",
+            [40] = "D3DFMT_A8P8",
+            [41] = "D3DFMT_P8",
         };
     }
 
@@ -55,7 +64,7 @@ namespace RenderWareIo.Structs.Txd
         public uint ContentByteCount => (uint)(
             4 + 4 + 32 + 32 + 
             4 + 4 + 2 + 2 + 1 + 1 + 1 + 1 + 
-            (this.Depth == 7 ? 256 * 4 : 0) +
+            GetPaletteByteCount() +
             4 + this.Data.Length +
             this.MipMaps.Sum(mipmap => mipmap.ByteCountWithHeader));
         public uint ByteCount => ContentByteCount;
