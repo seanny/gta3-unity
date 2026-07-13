@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GTA3Unity.Utility;
 using RenderWareIo;
 using RenderWareIo.Structs.Dff;
 using UnityEngine;
@@ -224,6 +225,8 @@ public static class DffMeshConverter
     private static GameObject CreateDffGameObject(
     DffFile dffFile,
     string modelName,
+    string txdName,
+    TxdMaterialCache materialCache,
     UnityEngine.Material fallbackMaterial)
     {
         var clump = dffFile.Dff?.Clump;
@@ -291,15 +294,9 @@ public static class DffMeshConverter
 
             meshFilter.sharedMesh = mesh;
 
-            int materialCount = Math.Max(1, mesh.subMeshCount);
-            UnityEngine.Material[] materials = new UnityEngine.Material[materialCount];
-
-            for (int materialIndex = 0;
-                 materialIndex < materials.Length;
-                 materialIndex++)
-            {
-                materials[materialIndex] = fallbackMaterial;
-            }
+            UnityEngine.Material[] materials = materialCache != null
+                ? materialCache.CreateMaterials(txdName, geometry)
+                : CreateFallbackMaterials(mesh.subMeshCount, fallbackMaterial);
 
             meshRenderer.sharedMaterials = materials;
 
@@ -321,13 +318,17 @@ public static class DffMeshConverter
     public static GameObject SpawnDff(
     DffFile dffFile,
     string modelName,
+    string txdName,
     Vector3 position,
     Quaternion rotation,
-    UnityEngine.Material fallbackMaterial)
+    UnityEngine.Material fallbackMaterial,
+    TxdMaterialCache materialCache)
     {
         GameObject instance = CreateDffGameObject(
             dffFile,
             modelName,
+            txdName,
+            materialCache,
             fallbackMaterial);
 
         if (instance == null)
@@ -346,6 +347,40 @@ public static class DffMeshConverter
             instance);
 
         return instance;
+    }
+
+    public static GameObject SpawnDff(
+    DffFile dffFile,
+    string modelName,
+    Vector3 position,
+    Quaternion rotation,
+    UnityEngine.Material fallbackMaterial)
+    {
+        return SpawnDff(
+            dffFile,
+            modelName,
+            string.Empty,
+            position,
+            rotation,
+            fallbackMaterial,
+            materialCache: null);
+    }
+
+    private static UnityEngine.Material[] CreateFallbackMaterials(
+        int materialCount,
+        UnityEngine.Material fallbackMaterial)
+    {
+        UnityEngine.Material[] materials =
+            new UnityEngine.Material[Math.Max(1, materialCount)];
+
+        for (int materialIndex = 0;
+             materialIndex < materials.Length;
+             materialIndex++)
+        {
+            materials[materialIndex] = fallbackMaterial;
+        }
+
+        return materials;
     }
 
     private static void DestroyGameObject(GameObject gameObject)

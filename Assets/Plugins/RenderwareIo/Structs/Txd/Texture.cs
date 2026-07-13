@@ -30,25 +30,32 @@ namespace RenderWareIo.Structs.Txd
             try
             {
                 this.Header = new ChunkHeader().Read(stream);
+                long textureEnd = stream.Position + this.Header.Size;
+
                 this.Data = new TextureData().Read(stream);
 
-                if (stream.Position == stream.Length)
+                if (stream.Position >= textureEnd)
                 {
                     Console.WriteLine("Encountered stream end instead of texture extra info");
                     this.ExtraInfo = TextureExtraInfo.Empty();
+                    stream.Position = textureEnd;
                     return this;
                 }
 
                 var header = new ChunkHeader().Read(stream);
                 stream.Position -= 12;
 
-                if (header.Type != 3)
+                if (header.Type != 3 ||
+                    stream.Position + 12 + header.Size > textureEnd)
                 {
                     Console.WriteLine($"Encountered header {header.Type} instead of texture extra info (3)");
                     this.ExtraInfo = TextureExtraInfo.Empty();
+                    stream.Position = textureEnd;
                     return this;
                 }
+
                 this.ExtraInfo = new TextureExtraInfo().Read(stream);
+                stream.Position = textureEnd;
             }
             catch (Exception e)
             {

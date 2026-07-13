@@ -24,11 +24,13 @@ namespace GTA3Unity
         [SerializeField] private List<RenderWareIo.Structs.Ide.Car> m_Cars = new();
 
         private Material m_FallbackMaterial;
+        private TxdMaterialCache m_TxdMaterialCache;
 
         private void Start()
         {
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
             m_MainImg = new ImgFile(Path.Combine(m_GtaDirectory, "models", "gta3.img"));
+            m_TxdMaterialCache = new TxdMaterialCache(m_MainImg, m_FallbackMaterial);
             m_DatFiles.Add(new(Path.Combine(m_GtaDirectory, "data", "default.dat")));
             m_DatFiles.Add(new(Path.Combine(m_GtaDirectory, "data", "gta3.dat")));
 
@@ -58,11 +60,13 @@ namespace GTA3Unity
                                 continue;
                             }
                             Debug.Log($"Spawning {inst.ModelName}: [X:{inst.Position.X} Y:{inst.Position.Y} Z:{inst.Position.Z}]");
-                            MeshSpawn.SpawnMesh(meshObj, new Vector3(inst.Position.X, inst.Position.Y, inst.Position.Z), new Quaternion(inst.Rotation.X,inst.Rotation.Y,inst.Rotation.Z,inst.Rotation.W), m_MainImg, m_FallbackMaterial);
+                            MeshSpawn.SpawnMesh(meshObj, new Vector3(inst.Position.X, inst.Position.Y, inst.Position.Z), new Quaternion(inst.Rotation.X,inst.Rotation.Y,inst.Rotation.Z,inst.Rotation.W), m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
                         }
                     }
                 }
             }
+
+            m_TxdMaterialCache.LogStats();
         }
     }
 }

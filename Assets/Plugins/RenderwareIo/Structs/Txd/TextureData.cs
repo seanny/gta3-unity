@@ -82,6 +82,8 @@ namespace RenderWareIo.Structs.Txd
             try
             {
                 this.Header = new ChunkHeader().Read(stream);
+                long dataEnd = stream.Position + this.Header.Size;
+
                 this.Version = RenderWareFileHelper.ReadUint32(stream);
                 this.FilterFlags = RenderWareFileHelper.ReadUint32(stream);
                 this.TextureName = string.Join("", RenderWareFileHelper.ReadChars(stream, 32));
@@ -96,19 +98,27 @@ namespace RenderWareIo.Structs.Txd
                 this.TexCodeType = RenderWareFileHelper.ReadByte(stream);
                 this.Flags = RenderWareFileHelper.ReadByte(stream);
 
-                this.Pallette = new byte[this.Depth == 7 ? 256 * 4 : 0];
+                this.Pallette = new byte[GetPaletteByteCount()];
                 for (int i = 0; i < this.Pallette.Length; i++)
                 {
                     this.Pallette[i] = RenderWareFileHelper.ReadByte(stream);
                 }
+
                 this.DataSize = RenderWareFileHelper.ReadUint32(stream);
                 this.Data = new byte[this.DataSize];
-                stream.Read(this.Data, 0, (int)this.DataSize);
-                //for (int i = 0; i < this.Data.Length; i++)
-                //{
-                //    this.Data[i] = RenderWareFileHelper.ReadByte(stream);
-                //}
-                this.MipMaps = RenderWareFileHelper.ReadBinaryStructure<MipMap>(stream, this.MipMapCount - 1);
+                int bytesRead = stream.Read(this.Data, 0, (int)this.DataSize);
+
+                if (bytesRead != this.Data.Length)
+                {
+                    throw new IOException(
+                        $"Unable to read texture data '{this.TextureName}' " +
+                        $"from memory stream. Expected {this.Data.Length} bytes, read {bytesRead}.");
+                }
+
+                int mipMapCount = Math.Max(0, this.MipMapCount - 1);
+                this.MipMaps = RenderWareFileHelper.ReadBinaryStructure<MipMap>(stream, mipMapCount);
+
+                stream.Position = dataEnd;
             }
             catch (Exception e)
             {
@@ -116,6 +126,21 @@ namespace RenderWareIo.Structs.Txd
             }
 
             return this;
+        }
+
+        private int GetPaletteByteCount()
+        {
+            if (this.Depth == 8)
+            {
+                return 256 * 4;
+            }
+
+            if (this.Depth == 4)
+            {
+                return 16 * 4;
+            }
+
+            return 0;
         }
 
         public void Write(Stream stream)

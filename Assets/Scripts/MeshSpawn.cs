@@ -1,4 +1,5 @@
 using System;
+using GTA3Unity.Utility;
 using RenderWareIo;
 using UnityEngine;
 using ImgFile = GTA3Unity.Img.ImgFile;
@@ -7,7 +8,13 @@ namespace GTA3Unity
 {
     public static class MeshSpawn
     {
-        public static void SpawnMesh(RenderWareIo.Structs.Ide.Obj meshObj, Vector3 position, Quaternion rotation, ImgFile imgFileToReadFrom, Material fallbackMaterial)
+        public static void SpawnMesh(
+            RenderWareIo.Structs.Ide.Obj meshObj,
+            Vector3 position,
+            Quaternion rotation,
+            ImgFile imgFileToReadFrom,
+            Material fallbackMaterial,
+            TxdMaterialCache materialCache)
         {
             string dffName = $"{meshObj.ModelName}.dff";
 
@@ -24,7 +31,14 @@ namespace GTA3Unity
             try
             {
                 DffFile dffFile = new DffFile(bytes);
-                DffMeshConverter.SpawnDff(dffFile, meshObj.ModelName, position, rotation, fallbackMaterial);
+                DffMeshConverter.SpawnDff(
+                    dffFile,
+                    meshObj.ModelName,
+                    meshObj.TxdName,
+                    position,
+                    rotation,
+                    fallbackMaterial,
+                    materialCache);
             }
             catch (Exception exception)
             {
