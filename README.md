@@ -1,5 +1,7 @@
 # GTA3-Unity
 
+![Screenshot of gta3-unity inside of Unity showcasing Portland with the rest of Liberty City in the background in an early state](Screenshots/Screenshot%201.png)
+
 GTA3-Unity is a Unity project that aims to create a fully playable version of GTA III inside the Unity game engine, with goals similar to those of re3 and OpenRW.
 
 Both projects made significant contributions:
