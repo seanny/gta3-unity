@@ -556,6 +556,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.FileLoader
   m_GtaDirectory: D:\Games\steamapps\common\Grand Theft Auto 3
+  m_DatFiles: []
+  m_Objects: []
+  m_Cars: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

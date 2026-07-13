@@ -128,6 +128,9 @@ namespace GTA3Unity.Ipl
                     Debug.LogWarning("Unknown type");
                     break;
             }
+
+            ItemDefinition itemDefinition = new ItemDefinition(id, model, texture);
+            DatManifest.ItemDefinitions.Add(itemDefinition);
         }
     }
 }

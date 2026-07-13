@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GTA3Unity.Ipl;
 
 namespace GTA3Unity
 {
@@ -8,5 +9,6 @@ namespace GTA3Unity
         public static List<string> IplFiles = new();
         public static List<string> ImgFiles = new();
         public static List<string> ColFiles = new();
+        public static List<ItemDefinition> ItemDefinitions = new();
     }
 }
