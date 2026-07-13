@@ -5,6 +5,7 @@ using RenderWareIo;
 using RenderWareIo.Structs.Dff;
 using RenderWareIo.Structs.Txd;
 using UnityEngine;
+using UnityEngine.Rendering;
 using DffMaterial = RenderWareIo.Structs.Dff.Material;
 using ImgFile = GTA3Unity.Img.ImgFile;
 using TxdTexture = RenderWareIo.Structs.Txd.Texture;
@@ -99,6 +100,11 @@ namespace GTA3Unity.Utility
             if (material.HasProperty("_MainTex"))
             {
                 material.SetTexture("_MainTex", texture);
+            }
+
+            if (material.HasProperty("_Cull"))
+            {
+                material.SetFloat("_Cull", (float)CullMode.Back);
             }
 
             m_Materials[materialKey] = material;

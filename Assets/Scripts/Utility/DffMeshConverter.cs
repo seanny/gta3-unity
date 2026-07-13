@@ -93,7 +93,7 @@ public static class DffMeshConverter
 
             for (int i = 0; i < vertexCount; i++)
             {
-                normals[i] = ConvertVector(morphTarget.Normals[i]).normalized;
+                normals[i] = -ConvertVector(morphTarget.Normals[i]).normalized;
             }
 
             mesh.normals = normals;
@@ -113,7 +113,7 @@ public static class DffMeshConverter
 
                 uvs[i] = new Vector2(
                     sourceUv.X,
-                    flipTextureV ? 1.0f - sourceUv.Y : sourceUv.Y);
+                    flipTextureV ? sourceUv.Y : 1.0f - sourceUv.Y);
             }
 
             mesh.uv = uvs;
@@ -183,18 +183,9 @@ public static class DffMeshConverter
 
             List<int> indices = trianglesByMaterial[materialIndex];
 
-            if(flipTextureV)
-            {
-                indices.Add(indexA);
-                indices.Add(indexB);
-                indices.Add(indexC);
-            }
-            else
-            {
-                indices.Add(indexA);
-                indices.Add(indexC);
-                indices.Add(indexB);
-            }
+            indices.Add(indexA);
+            indices.Add(indexB);
+            indices.Add(indexC);
         }
 
         mesh.subMeshCount = subMeshCount;
