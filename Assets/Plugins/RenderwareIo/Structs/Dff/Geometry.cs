@@ -114,7 +114,8 @@ namespace RenderWareIo.Structs.Dff
 
         private bool HasSurfaceProperties()
         {
-            return this.StructHeader.Marker < 0x34000;
+            return this.StructHeader.Marker < 0x34000 ||
+                this.StructHeader.Marker == 0x0800FFFF;
         }
 
         private void ReadMorphTargets(Stream stream)
