@@ -172,7 +172,7 @@ namespace GTA3Unity
                 }
             }
 
-            //LoadWorldMap();
+            LoadWorldMap();
         }
 
         public void LoadWorldMap()
