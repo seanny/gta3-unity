@@ -34,7 +34,7 @@ namespace GTA3Unity.Core
         [SerializeField] private string m_Logo;
         [SerializeField] private string m_Intro;
 
-        private EGameState m_GameState;
+        [SerializeField] private EGameState m_GameState;
         private bool m_IsInit;
         private bool m_IntroFailed;
 
@@ -68,6 +68,7 @@ namespace GTA3Unity.Core
 
         private void Update()
         {
+            Debug.Log(m_GameState);
             switch(m_GameState)
             {
                 case EGameState.Startup:
@@ -95,10 +96,6 @@ namespace GTA3Unity.Core
                 m_VideoPlayer.Stop();
                 OnVideoEnded(m_VideoPlayer);
             }
-            if(m_IntroFailed == true)
-            {
-                m_GameState++;
-            }
         }
 
         public void Init(string gtaRoot)
@@ -122,7 +119,7 @@ namespace GTA3Unity.Core
 
         private void OnPlaybackError(VideoPlayer source, string message)
         {
-            m_IntroFailed = true;
+            m_GameState = EGameState.InitialiseOnce;
         }
     }
 }

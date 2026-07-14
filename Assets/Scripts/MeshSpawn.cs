@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GTA3Unity.Utility;
 using RenderWareIo;
+using RenderWareIo.Structs.Ide;
 using UnityEngine;
 using ImgFile = GTA3Unity.Img.ImgFile;
 
@@ -9,8 +10,7 @@ namespace GTA3Unity
 {
     public static class MeshSpawn
     {
-        private static readonly Dictionary<string, GameObject> s_Templates =
-            new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<int, GameObject> s_Templates = new();
 
         private static int s_TemplateHits;
         private static int s_TemplateMisses;
@@ -33,12 +33,10 @@ namespace GTA3Unity
                 return false;
             }
 
-            string templateKey = $"{meshObj.ModelName}|{meshObj.TxdName}";
-
             try
             {
-                GameObject template = GetOrCreateTemplate(
-                    templateKey,
+                GameObject template = GetOrCreateTemplate<Obj>(
+                    meshObj.Id,
                     meshObj,
                     imgFileToReadFrom,
                     fallbackMaterial,
@@ -97,14 +95,14 @@ namespace GTA3Unity
                 $"hits={s_TemplateHits}, misses={s_TemplateMisses}, failures={s_SpawnFailures}.");
         }
 
-        private static GameObject GetOrCreateTemplate(
-            string templateKey,
-            RenderWareIo.Structs.Ide.Obj meshObj,
+        public static GameObject GetOrCreateTemplate<T>(
+            int index,
+            IModelTxd meshObj,
             ImgFile imgFileToReadFrom,
             Material fallbackMaterial,
-            TxdMaterialCache materialCache)
+            TxdMaterialCache materialCache) where T : IModelTxd
         {
-            if (s_Templates.TryGetValue(templateKey, out GameObject template))
+            if (s_Templates.TryGetValue(index, out GameObject template))
             {
                 s_TemplateHits++;
                 return template;
@@ -125,7 +123,7 @@ namespace GTA3Unity
 
             if (template != null)
             {
-                s_Templates[templateKey] = template;
+                s_Templates[index] = template;
             }
 
             return template;

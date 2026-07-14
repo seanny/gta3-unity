@@ -6,7 +6,7 @@ using System.Text;
 
 namespace RenderWareIo.Structs.Ide
 {
-    public struct Ped : IIdeEntity<Ped>
+    public struct Ped : IIdeEntity<Ped>, IModelTxd
     {
         public int Id { get; set; }
         public string ModelName { get; set; }
