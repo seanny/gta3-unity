@@ -290,7 +290,10 @@ namespace GTA3Unity.Utility
             rootObject.transform.localRotation = Quaternion.identity;
             rootObject.transform.localScale = Vector3.one;
 
-            DffFrameContext frameContext = BuildFrameHierarchy(rootObject, clump);
+            DffFrameContext frameContext = BuildFrameHierarchy(
+                rootObject,
+                clump,
+                HasSkinnedGeometry(clump));
 
             for (int geometryIndex = 0;
                  geometryIndex < clump.GeometryList.Geometries.Count;
@@ -526,7 +529,28 @@ namespace GTA3Unity.Utility
             return null;
         }
 
-        private static DffFrameContext BuildFrameHierarchy(GameObject rootObject, Clump clump)
+        private static bool HasSkinnedGeometry(Clump clump)
+        {
+            if (clump?.GeometryList?.Geometries == null)
+            {
+                return false;
+            }
+
+            foreach (Geometry geometry in clump.GeometryList.Geometries)
+            {
+                if (GetExtension<SkinPlugin>(geometry.Extension) != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static DffFrameContext BuildFrameHierarchy(
+            GameObject rootObject,
+            Clump clump,
+            bool applyFramePositions)
         {
             FrameList frameList = clump.FrameList;
             int frameCount = frameList?.Frames?.Count ?? 0;
@@ -548,7 +572,9 @@ namespace GTA3Unity.Utility
                         : transforms[frame.Parent];
 
                 transforms[frameIndex].SetParent(parent, worldPositionStays: false);
-                transforms[frameIndex].localPosition = ConvertVector(frame.Position);
+                transforms[frameIndex].localPosition = applyFramePositions
+                    ? ConvertVector(frame.Position)
+                    : Vector3.zero;
                 transforms[frameIndex].localRotation = ConvertFrameRotation(frame);
                 transforms[frameIndex].localScale = Vector3.one;
             }
