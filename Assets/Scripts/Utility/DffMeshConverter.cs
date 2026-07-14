@@ -4,6 +4,7 @@ using System.Linq;
 using GTA3Unity.Utility;
 using RenderWareIo;
 using RenderWareIo.Structs.Dff;
+using RenderWareIo.Structs.Dff.Plugins;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -205,12 +206,66 @@ namespace GTA3Unity.Utility
             return mesh;
         }
 
+        private static Mesh CreateSkinnedMesh(
+            Geometry geometry,
+            SkinPlugin skin,
+            string meshName,
+            bool flipTextureV = false)
+        {
+            Mesh mesh = CreateMesh(geometry, meshName, flipTextureV);
+
+            if (skin == null ||
+                skin.VertexBoneIndices == null ||
+                skin.VertexBoneWeights == null ||
+                skin.VertexBoneIndices.Count != mesh.vertexCount ||
+                skin.VertexBoneWeights.Count != mesh.vertexCount)
+            {
+                return mesh;
+            }
+
+            BoneWeight[] boneWeights = new BoneWeight[mesh.vertexCount];
+
+            for (int vertexIndex = 0; vertexIndex < mesh.vertexCount; vertexIndex++)
+            {
+                byte[] indices = skin.VertexBoneIndices[vertexIndex];
+                float[] weights = skin.VertexBoneWeights[vertexIndex];
+
+                boneWeights[vertexIndex] = new BoneWeight
+                {
+                    boneIndex0 = indices[0],
+                    boneIndex1 = indices[1],
+                    boneIndex2 = indices[2],
+                    boneIndex3 = indices[3],
+                    weight0 = weights[0],
+                    weight1 = weights[1],
+                    weight2 = weights[2],
+                    weight3 = weights[3]
+                };
+            }
+
+            mesh.boneWeights = boneWeights;
+            return mesh;
+        }
+
         private static Vector3 ConvertVector(RwVector3 vector)
         {
             return new Vector3(
                 vector.X,
                 vector.Z,
                 vector.Y);
+        }
+
+        private static Quaternion ConvertFrameRotation(Frame frame)
+        {
+            Vector3 up = ConvertVector(frame.Rot2);
+            Vector3 forward = ConvertVector(frame.Rot3);
+
+            if (up.sqrMagnitude < 0.0001f || forward.sqrMagnitude < 0.0001f)
+            {
+                return Quaternion.identity;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, up.normalized);
         }
 
         private static GameObject CreateDffGameObject(
@@ -235,18 +290,27 @@ namespace GTA3Unity.Utility
             rootObject.transform.localRotation = Quaternion.identity;
             rootObject.transform.localScale = Vector3.one;
 
+            DffFrameContext frameContext = BuildFrameHierarchy(rootObject, clump);
+
             for (int geometryIndex = 0;
                  geometryIndex < clump.GeometryList.Geometries.Count;
                  geometryIndex++)
             {
                 Geometry geometry =
                     clump.GeometryList.Geometries[geometryIndex];
+                Atomic atomic = FindAtomicForGeometry(clump, geometryIndex);
+                SkinPlugin skin = GetExtension<SkinPlugin>(geometry.Extension);
 
                 Mesh mesh;
 
                 try
                 {
-                    mesh = CreateMesh(
+                    mesh = skin != null
+                        ? CreateSkinnedMesh(
+                            geometry,
+                            skin,
+                            $"{modelName}_Geometry_{geometryIndex}")
+                        : CreateMesh(
                         geometry,
                         $"{modelName}_Geometry_{geometryIndex}");
                 }
@@ -269,27 +333,42 @@ namespace GTA3Unity.Utility
                 GameObject geometryObject =
                     new GameObject($"{modelName}_Geometry_{geometryIndex}");
 
+                Transform parent = frameContext.GetFrameTransform(atomic?.FrameIndex);
                 geometryObject.transform.SetParent(
-                    rootObject.transform,
+                    parent != null ? parent : rootObject.transform,
                     worldPositionStays: false);
 
                 geometryObject.transform.localPosition = Vector3.zero;
                 geometryObject.transform.localRotation = Quaternion.identity;
                 geometryObject.transform.localScale = Vector3.one;
 
-                MeshFilter meshFilter =
-                    geometryObject.AddComponent<MeshFilter>();
-
-                MeshRenderer meshRenderer =
-                    geometryObject.AddComponent<MeshRenderer>();
-
-                meshFilter.sharedMesh = mesh;
-
                 UnityEngine.Material[] materials = materialCache != null
                     ? materialCache.CreateMaterials(txdName, geometry)
                     : CreateFallbackMaterials(mesh.subMeshCount, fallbackMaterial);
 
-                meshRenderer.sharedMaterials = materials;
+                if (skin != null && frameContext.TryGetBones(skin, out Transform[] bones))
+                {
+                    SkinnedMeshRenderer skinnedMeshRenderer =
+                        geometryObject.AddComponent<SkinnedMeshRenderer>();
+
+                    mesh.bindposes = CreateBindPoses(bones, geometryObject.transform);
+                    skinnedMeshRenderer.sharedMesh = mesh;
+                    skinnedMeshRenderer.bones = bones;
+                    skinnedMeshRenderer.rootBone = bones.Length > 0 ? bones[0] : frameContext.RootFrame;
+                    skinnedMeshRenderer.sharedMaterials = materials;
+                    skinnedMeshRenderer.updateWhenOffscreen = true;
+                }
+                else
+                {
+                    MeshFilter meshFilter =
+                        geometryObject.AddComponent<MeshFilter>();
+
+                    MeshRenderer meshRenderer =
+                        geometryObject.AddComponent<MeshRenderer>();
+
+                    meshFilter.sharedMesh = mesh;
+                    meshRenderer.sharedMaterials = materials;
+                }
 
                 geometryObject.SetActive(true);
             }
@@ -396,6 +475,179 @@ namespace GTA3Unity.Utility
             }
 
             return materials;
+        }
+
+        private static Atomic FindAtomicForGeometry(Clump clump, int geometryIndex)
+        {
+            if (clump?.Atomics == null)
+            {
+                return null;
+            }
+
+            foreach (Atomic atomic in clump.Atomics)
+            {
+                if (atomic.GeometryIndex == geometryIndex)
+                {
+                    return atomic;
+                }
+            }
+
+            return null;
+        }
+
+        private static Matrix4x4[] CreateBindPoses(Transform[] bones, Transform meshTransform)
+        {
+            Matrix4x4[] bindPoses = new Matrix4x4[bones.Length];
+
+            for (int i = 0; i < bones.Length; i++)
+            {
+                bindPoses[i] = bones[i].worldToLocalMatrix * meshTransform.localToWorldMatrix;
+            }
+
+            return bindPoses;
+        }
+
+        private static T GetExtension<T>(Extension extension)
+            where T : class, IExtensionPlugin
+        {
+            if (extension?.Extensions == null)
+            {
+                return null;
+            }
+
+            foreach (IExtensionPlugin plugin in extension.Extensions)
+            {
+                if (plugin is T typedPlugin)
+                {
+                    return typedPlugin;
+                }
+            }
+
+            return null;
+        }
+
+        private static DffFrameContext BuildFrameHierarchy(GameObject rootObject, Clump clump)
+        {
+            FrameList frameList = clump.FrameList;
+            int frameCount = frameList?.Frames?.Count ?? 0;
+            Transform[] transforms = new Transform[frameCount];
+
+            for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
+            {
+                string frameName = GetFrameName(frameList, frameIndex);
+                GameObject frameObject = new GameObject(frameName);
+                transforms[frameIndex] = frameObject.transform;
+            }
+
+            for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
+            {
+                Frame frame = frameList.Frames[frameIndex];
+                Transform parent = frame.Parent == uint.MaxValue ||
+                    frame.Parent >= transforms.Length
+                        ? rootObject.transform
+                        : transforms[frame.Parent];
+
+                transforms[frameIndex].SetParent(parent, worldPositionStays: false);
+                transforms[frameIndex].localPosition = ConvertVector(frame.Position);
+                transforms[frameIndex].localRotation = ConvertFrameRotation(frame);
+                transforms[frameIndex].localScale = Vector3.one;
+            }
+
+            return new DffFrameContext(
+                transforms,
+                FindHierarchy(frameList));
+        }
+
+        private static string GetFrameName(FrameList frameList, int frameIndex)
+        {
+            FramePlugin framePlugin = frameList.Extensions != null &&
+                frameIndex < frameList.Extensions.Count
+                    ? GetExtension<FramePlugin>(frameList.Extensions[frameIndex])
+                    : null;
+
+            string name = framePlugin?.Value;
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                return name.TrimEnd('\0', ' ', '\r', '\n', '\t');
+            }
+
+            return $"Frame_{frameIndex}";
+        }
+
+        private static HAnimPlugin FindHierarchy(FrameList frameList)
+        {
+            if (frameList?.Extensions == null)
+            {
+                return null;
+            }
+
+            foreach (Extension extension in frameList.Extensions)
+            {
+                HAnimPlugin hierarchy = GetExtension<HAnimPlugin>(extension);
+
+                if (hierarchy != null && hierarchy.Nodes != null && hierarchy.Nodes.Count > 0)
+                {
+                    return hierarchy;
+                }
+            }
+
+            return null;
+        }
+
+        private sealed class DffFrameContext
+        {
+            private readonly Transform[] m_Frames;
+            private readonly HAnimPlugin m_Hierarchy;
+
+            public Transform RootFrame => m_Frames.Length > 0 ? m_Frames[0] : null;
+
+            public DffFrameContext(Transform[] frames, HAnimPlugin hierarchy)
+            {
+                m_Frames = frames ?? Array.Empty<Transform>();
+                m_Hierarchy = hierarchy;
+            }
+
+            public Transform GetFrameTransform(uint? frameIndex)
+            {
+                if (!frameIndex.HasValue || frameIndex.Value >= m_Frames.Length)
+                {
+                    return null;
+                }
+
+                return m_Frames[frameIndex.Value];
+            }
+
+            public bool TryGetBones(SkinPlugin skin, out Transform[] bones)
+            {
+                int boneCount = Math.Max(0, (int)skin.BoneCount);
+                bones = new Transform[boneCount];
+
+                for (int boneIndex = 0; boneIndex < boneCount; boneIndex++)
+                {
+                    int frameIndex = GetFrameIndexForBone(boneIndex);
+
+                    if (frameIndex < 0 || frameIndex >= m_Frames.Length)
+                    {
+                        bones = null;
+                        return false;
+                    }
+
+                    bones[boneIndex] = m_Frames[frameIndex];
+                }
+
+                return bones.Length > 0;
+            }
+
+            private int GetFrameIndexForBone(int boneIndex)
+            {
+                if (m_Hierarchy?.Nodes != null && boneIndex < m_Hierarchy.Nodes.Count)
+                {
+                    return m_Hierarchy.Nodes[boneIndex].NodeIndex;
+                }
+
+                return boneIndex;
+            }
         }
 
         private static void DestroyGameObject(GameObject gameObject)

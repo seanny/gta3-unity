@@ -24,6 +24,12 @@ namespace RenderWareIo.Structs.Dff
                 extension.Read(stream);
                 return extension;
             },
+            [HAnimPlugin.PluginId] = (stream) =>
+            {
+                var extension = new HAnimPlugin();
+                extension.Read(stream);
+                return extension;
+            },
         };
 
         public ChunkHeader Header { get; set; }
@@ -44,6 +50,11 @@ namespace RenderWareIo.Structs.Dff
         }
 
         public Extension Read(Stream stream)
+        {
+            return Read(stream, -1);
+        }
+
+        public Extension Read(Stream stream, int vertexCount)
         {
             if (stream.Position == stream.Length || stream.Position > stream.Length - 12)
             {
@@ -71,7 +82,14 @@ namespace RenderWareIo.Structs.Dff
             {
                 ChunkHeader header = new ChunkHeader().Read(stream);
 
-                if (ExtensionTypes.ContainsKey(header.Type))
+                if (header.Type == SkinPlugin.PluginId)
+                {
+                    stream.Position -= 12;
+                    var plugin = new SkinPlugin();
+                    plugin.Read(stream, vertexCount);
+                    this.Extensions.Add(plugin);
+                }
+                else if (ExtensionTypes.ContainsKey(header.Type))
                 {
                     stream.Position -= 12;
                     var plugin = ExtensionTypes[header.Type](stream);

@@ -107,7 +107,7 @@ namespace RenderWareIo.Structs.Dff
             // Move to the end of the geometry struct before reading child chunks.
             stream.Position = start + this.StructHeader.Size + 24;
             this.MaterialList = new MaterialList().Read(stream);
-            this.Extension = new Extension().Read(stream);
+            this.Extension = new Extension().Read(stream, this.VertexCount);
 
             return this;
         }
