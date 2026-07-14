@@ -122,12 +122,22 @@ namespace GTA3Unity
             GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
             DffFile dffFile = new DffFile(entry.GetData());
 
-            template = DffMeshConverter.CreateDffTemplate(
-                dffFile,
-                meshObj.ModelName,
-                meshObj.TxdName,
-                fallbackMaterial,
-                materialCache);
+            bool isPedDefinition =
+                meshObj is RenderWareIo.Structs.Ide.Ped;
+
+            template = isPedDefinition
+                ? DffMeshConverter.CreatePedDffTemplate(
+                    dffFile,
+                    meshObj.ModelName,
+                    meshObj.TxdName,
+                    fallbackMaterial,
+                    materialCache)
+                : DffMeshConverter.CreateDffTemplate(
+                    dffFile,
+                    meshObj.ModelName,
+                    meshObj.TxdName,
+                    fallbackMaterial,
+                    materialCache);
 
             if (template != null)
             {

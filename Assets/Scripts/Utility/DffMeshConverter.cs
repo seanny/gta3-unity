@@ -257,8 +257,8 @@ namespace GTA3Unity.Utility
 
         private static Quaternion ConvertFrameRotation(Frame frame)
         {
-            Vector3 up = ConvertVector(frame.Rot3);
-            Vector3 forward = ConvertVector(frame.Rot2);
+            Vector3 up = ConvertVector(frame.Rot2);
+            Vector3 forward = ConvertVector(frame.Rot3);
 
             if (up.sqrMagnitude < 0.0001f || forward.sqrMagnitude < 0.0001f)
             {
@@ -268,7 +268,106 @@ namespace GTA3Unity.Utility
             return Quaternion.LookRotation(forward.normalized, up.normalized);
         }
 
-        private static GameObject CreateDffGameObject(
+        private static GameObject CreateMapDffGameObject(
+            DffFile dffFile,
+            string modelName,
+            string txdName,
+            TxdMaterialCache materialCache,
+            UnityEngine.Material fallbackMaterial)
+        {
+            Clump clump = dffFile.Dff?.Clump;
+
+            if (clump?.GeometryList?.Geometries == null ||
+                clump.GeometryList.Geometries.Count == 0)
+            {
+                Debug.LogError($"DFF '{modelName}' contains no geometry.");
+                return null;
+            }
+
+            GameObject rootObject = new GameObject(modelName);
+
+            rootObject.transform.localPosition = Vector3.zero;
+            rootObject.transform.localRotation = Quaternion.identity;
+            rootObject.transform.localScale = Vector3.one;
+
+            for (int geometryIndex = 0;
+                 geometryIndex < clump.GeometryList.Geometries.Count;
+                 geometryIndex++)
+            {
+                Geometry geometry =
+                    clump.GeometryList.Geometries[geometryIndex];
+
+                Mesh mesh;
+
+                try
+                {
+                    mesh = CreateMesh(
+                        geometry,
+                        $"{modelName}_Geometry_{geometryIndex}");
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning(
+                        $"Skipping geometry {geometryIndex} in '{modelName}': {exception.Message}");
+
+                    continue;
+                }
+
+                if (mesh == null || mesh.vertexCount == 0)
+                {
+                    Debug.LogWarning(
+                        $"Skipping empty geometry {geometryIndex} in '{modelName}'.");
+
+                    continue;
+                }
+
+                GameObject geometryObject =
+                    new GameObject($"{modelName}_Geometry_{geometryIndex}");
+
+                geometryObject.transform.SetParent(
+                    rootObject.transform,
+                    worldPositionStays: false);
+
+                geometryObject.transform.localPosition = Vector3.zero;
+                geometryObject.transform.localRotation = Quaternion.identity;
+                geometryObject.transform.localScale = Vector3.one;
+
+                UnityEngine.Material[] materials = materialCache != null
+                    ? materialCache.CreateMaterials(txdName, geometry)
+                    : CreateFallbackMaterials(mesh.subMeshCount, fallbackMaterial);
+
+                MeshFilter meshFilter =
+                    geometryObject.AddComponent<MeshFilter>();
+
+                MeshRenderer meshRenderer =
+                    geometryObject.AddComponent<MeshRenderer>();
+
+                meshFilter.sharedMesh = mesh;
+                meshRenderer.sharedMaterials = materials;
+
+                // Temporary measure until I implement GTA collisions
+                MeshCollider meshCollider =
+                    geometryObject.AddComponent<MeshCollider>();
+
+                meshCollider.sharedMesh = mesh;
+                meshCollider.convex = false;
+
+                geometryObject.SetActive(true);
+            }
+
+            if (rootObject.transform.childCount == 0)
+            {
+                DestroyGameObject(rootObject);
+                Debug.LogWarning($"DFF '{modelName}' did not produce any renderable geometry.");
+                return null;
+            }
+
+            rootObject.SetActive(true);
+
+            return rootObject;
+        }
+
+        private static GameObject CreatePedDffGameObject(
             DffFile dffFile,
             string modelName,
             string txdName,
@@ -293,7 +392,7 @@ namespace GTA3Unity.Utility
             DffFrameContext frameContext = BuildFrameHierarchy(
                 rootObject,
                 clump,
-                HasSkinnedGeometry(clump));
+                applyFramePositions: true);
 
             for (int geometryIndex = 0;
                  geometryIndex < clump.GeometryList.Geometries.Count;
@@ -314,8 +413,8 @@ namespace GTA3Unity.Utility
                             skin,
                             $"{modelName}_Geometry_{geometryIndex}")
                         : CreateMesh(
-                        geometry,
-                        $"{modelName}_Geometry_{geometryIndex}");
+                            geometry,
+                            $"{modelName}_Geometry_{geometryIndex}");
                 }
                 catch (Exception exception)
                 {
@@ -336,7 +435,10 @@ namespace GTA3Unity.Utility
                 GameObject geometryObject =
                     new GameObject($"{modelName}_Geometry_{geometryIndex}");
 
-                Transform parent = frameContext.GetFrameTransform(atomic?.FrameIndex);
+                Transform parent = skin != null
+                    ? rootObject.transform
+                    : frameContext.GetFrameTransform(atomic?.FrameIndex);
+
                 geometryObject.transform.SetParent(
                     parent != null ? parent : rootObject.transform,
                     worldPositionStays: false);
@@ -371,13 +473,6 @@ namespace GTA3Unity.Utility
 
                     meshFilter.sharedMesh = mesh;
                     meshRenderer.sharedMaterials = materials;
-
-                    // Temporary measure until I implement GTA collisions
-                    MeshCollider meshCollider =
-                        geometryObject.AddComponent<MeshCollider>();
-
-                    meshCollider.sharedMesh = mesh;
-                    meshCollider.convex = false;
                 }
 
                 geometryObject.SetActive(true);
@@ -404,7 +499,7 @@ namespace GTA3Unity.Utility
             UnityEngine.Material fallbackMaterial,
             TxdMaterialCache materialCache)
         {
-            GameObject instance = CreateDffGameObject(
+            GameObject instance = CreateMapDffGameObject(
                 dffFile,
                 modelName,
                 txdName,
@@ -436,7 +531,31 @@ namespace GTA3Unity.Utility
             UnityEngine.Material fallbackMaterial,
             TxdMaterialCache materialCache)
         {
-            GameObject template = CreateDffGameObject(
+            GameObject template = CreateMapDffGameObject(
+                dffFile,
+                modelName,
+                txdName,
+                materialCache,
+                fallbackMaterial);
+
+            if (template == null)
+            {
+                return null;
+            }
+
+            template.name = $"{modelName}_Template";
+            template.SetActive(false);
+            return template;
+        }
+
+        public static GameObject CreatePedDffTemplate(
+            DffFile dffFile,
+            string modelName,
+            string txdName,
+            UnityEngine.Material fallbackMaterial,
+            TxdMaterialCache materialCache)
+        {
+            GameObject template = CreatePedDffGameObject(
                 dffFile,
                 modelName,
                 txdName,
