@@ -205,11 +205,14 @@ Use properties when exposing state outside a type.
 
 ```csharp
 public int CurrentHealth { get; private set; }
+public int CurrentHour => m_CurrentHour;
 ```
 
 Do not expose mutable public fields unless required by a Unity-specific API or data format.
 
 Avoid properties that perform expensive calculations, allocate memory, modify state, or produce unexpected side effects.
+
+For read-only properties that read an existing private member, prefer the shorthand `=>` over `{ get { return ... } }`
 
 Incorrect:
 
@@ -219,6 +222,16 @@ public Vehicle ClosestVehicle
     get
     {
         return FindClosestVehicleInWorld();
+    }
+}
+```
+
+```csharp
+public int CurrentTime
+{
+    get
+    {
+        return m_CurrentTime
     }
 }
 ```
