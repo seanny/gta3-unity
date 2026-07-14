@@ -68,7 +68,6 @@ namespace GTA3Unity.Core
 
         private void Update()
         {
-            Debug.Log(m_GameState);
             switch(m_GameState)
             {
                 case EGameState.Startup:

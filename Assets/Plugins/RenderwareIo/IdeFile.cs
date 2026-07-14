@@ -24,7 +24,6 @@ namespace RenderWareIo
 
         public IdeFile(string path)
         {
-            Debug.Log(path);
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException($"Ide file '{path}' does not exist");

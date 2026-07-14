@@ -52,14 +52,11 @@ namespace RenderWareIo.Structs.Dat
             // this.Guns = new List<GunWeapon>();
             // this.MeleeWeapons = new List<MeleeWeapon>();
 
-            string dbgStr = string.Empty;
             string[] lines = content.Split('\n');
             foreach (string line in lines)
             {
-                dbgStr += line + "\n";
                 this.ParseLine(line);
             }
-            Debug.Log(dbgStr);
 
             return this;
         }

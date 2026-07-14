@@ -67,14 +67,11 @@ namespace RenderWareIo.Structs.Ide
             this.Weapons = new List<Weapon>();
             this.Cars = new List<Car>();
 
-            string dbgStr = string.Empty;
             string[] lines = content.Split('\n');
             foreach (string line in lines)
             {
-                dbgStr += line + "\n";
                 this.ParseLine(line);
             }
-            Debug.Log(dbgStr);
 
             return this;
         }
