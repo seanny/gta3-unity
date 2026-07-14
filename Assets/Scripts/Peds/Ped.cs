@@ -10,14 +10,21 @@ namespace GTA3Unity.Peds
         private static readonly Quaternion s_ModelBasisRotation =
             Quaternion.Euler(-90.0f, 0.0f, 0.0f);
 
-        private GameObject m_PedModel;
+        public NavMeshAgent NavMeshAgent => m_NavMeshAgent;
 
+        private GameObject m_PedModel;
+        private NavMeshAgent m_NavMeshAgent;
+        private PedStateMachine m_StateMachine;
+        #region Unity Lifecycle
         private IEnumerator Start()
         {
-            while(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
+            Debug.Assert(FileLoader.Instance != null);
+            while(!FileLoader.Instance.IsDone)
             {
                 yield return null;
             }
+
+            m_StateMachine = new PedStateMachine(this);
 
             int randIndex = Random.Range(0, 127);
             while(randIndex >= 26 && randIndex <= 29)
@@ -26,12 +33,49 @@ namespace GTA3Unity.Peds
                 randIndex = Random.Range(0, 126);
             }
 
-            GameObject template = FileLoader.Instance.GetModel(randIndex);
+            SetModel(randIndex);
+        }
+
+        private void Update()
+        {
+            if(m_StateMachine == null)
+            {
+                return;
+            }
+
+            m_StateMachine.OnUpdate(Time.deltaTime);
+        }
+        #endregion
+
+        public void PlayAnimation(string animName)
+        {
+            if(m_PedModel == null)
+            {
+                Debug.LogError($"Ped {name} does not have a PedModel attached.");
+                return;
+            }
+
+            FileLoader.Instance.PlayPedAnimation(m_PedModel, animName);
+        }
+
+        public void SetModel(int modelIndex)
+        {
+            if(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
+            {
+                return;
+            }
+
+            if(m_PedModel != null)
+            {
+                Destroy(m_PedModel);
+            }
+
+            GameObject template = FileLoader.Instance.GetModel(modelIndex);
 
             if (template == null)
             {
-                Debug.LogWarning($"Could not load ped model {randIndex}.");
-                yield break;
+                Debug.LogWarning($"Could not load ped model {modelIndex}.");
+                return;
             }
 
             m_PedModel = GameObject.Instantiate<GameObject>(template);

@@ -11,6 +11,7 @@ using GTA3Unity.Core;
 using Unity.Burst.Intrinsics;
 using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
+using Unity.AI.Navigation;
 
 namespace GTA3Unity
 {
@@ -20,6 +21,8 @@ namespace GTA3Unity
 
         public bool IsDone => m_IsDone;
         public ImgFile MainImg => m_MainImg;
+
+        [SerializeField] private NavMeshSurface m_Surface;
 
         [SerializeField]
         private List<RenderWareIo.DatFile> m_DatFiles = new();
@@ -140,7 +143,7 @@ namespace GTA3Unity
                 }
             }
 
-            //LoadWorldMap();
+            LoadWorldMap();
         }
 
         public void LoadWorldMap()
@@ -172,6 +175,12 @@ namespace GTA3Unity
                     IplFile iplFile = new(path);
                     foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
+                        if(inst.ModelName.Contains("LOD", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            // Ignore LOD's
+                            continue;
+                        }
+
                         instanceCount++;
 
                         if (!objectsById.TryGetValue(inst.Id, out IdeObj meshObj) &&
@@ -208,6 +217,11 @@ namespace GTA3Unity
                 $"IDE objects={m_Objects.Count}, missing definitions={missingDefinitionCount}.");
             MeshSpawn.LogStats();
             m_TxdMaterialCache.LogStats();
+
+            loadTimer = System.Diagnostics.Stopwatch.StartNew();
+            m_Surface.BuildNavMesh();
+            loadTimer.Stop();
+            Debug.Log($"Created navmesh in {loadTimer.ElapsedMilliseconds} ms.");
         }
 
         private void LoadPedAnimations()
