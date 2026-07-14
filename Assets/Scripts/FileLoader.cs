@@ -10,6 +10,7 @@ using ImgFile = GTA3Unity.Img.ImgFile;
 using GTA3Unity.Core;
 using Unity.Burst.Intrinsics;
 using RenderWareIo.Structs.Ide;
+using RenderWareIo.Structs.Ifp;
 
 namespace GTA3Unity
 {
@@ -36,7 +37,9 @@ namespace GTA3Unity
         private ImgFile m_MainImg;
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
+        private IfpFile m_PedIfpFile;
         private bool m_IsDone;
+        [SerializeField] private bool m_PrintAnims = false;
 
         void Awake()
         {
@@ -56,13 +59,57 @@ namespace GTA3Unity
             // Load model into memory for use
             foreach(var ideObject in m_Peds)
             {
-                Debug.Log($"{ideObject.Id} == {modelIndex}");
                 if(ideObject.Id == modelIndex)
                 {
                     return MeshSpawn.GetOrCreateTemplate<Ped>(modelIndex, ideObject, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
                 }
             }
             return null;
+        }
+
+        public bool PlayPedAnimation(
+            GameObject pedModel,
+            string preferredAnimationName = "idle_stance")
+        {
+            if (pedModel == null || m_PedIfpFile?.Ifp?.Animations == null)
+            {
+                return false;
+            }
+
+            IfpAnimation animation = FindPedAnimation(preferredAnimationName);
+
+            if (animation == null)
+            {
+                Debug.LogWarning($"Could not find a usable ped animation in ped.ifp.");
+                return false;
+            }
+
+            AnimationClip clip;
+
+            try
+            {
+                clip = IfpAnimationConverter.CreateLegacyClip(
+                    animation,
+                    pedModel.transform);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Failed to build ped animation '{animation.Name}': {exception.Message}");
+                return false;
+            }
+
+            Animation animationComponent = pedModel.GetComponent<Animation>();
+
+            if (animationComponent == null)
+            {
+                animationComponent = pedModel.AddComponent<Animation>();
+            }
+
+            animationComponent.AddClip(clip, clip.name);
+            animationComponent.clip = clip;
+            animationComponent.wrapMode = WrapMode.Loop;
+            animationComponent.Play(clip.name);
+            return true;
         }
 
         public void Init()
@@ -77,6 +124,7 @@ namespace GTA3Unity
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
             m_TxdMaterialCache = new TxdMaterialCache(m_MainImg, m_FallbackMaterial);
+            LoadPedAnimations();
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "default.dat")));
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "gta3.dat")));
             MeshSpawn.ClearCache();
@@ -160,6 +208,80 @@ namespace GTA3Unity
                 $"IDE objects={m_Objects.Count}, missing definitions={missingDefinitionCount}.");
             MeshSpawn.LogStats();
             m_TxdMaterialCache.LogStats();
+        }
+
+        private void LoadPedAnimations()
+        {
+            string pedIfpPath = Path.Combine(
+                GameManager.Instance.GtaDirectory,
+                "anim",
+                "ped.ifp");
+
+            if (!File.Exists(pedIfpPath))
+            {
+                Debug.LogWarning($"Could not find ped animation file '{pedIfpPath}'.");
+                return;
+            }
+
+            try
+            {
+                m_PedIfpFile = new IfpFile(pedIfpPath);
+                Debug.Log($"Loaded {m_PedIfpFile.Ifp.Animations.Count} ped animations from '{pedIfpPath}'.");
+                if(m_PrintAnims)
+                {
+                    string animList = "==== ANIM LIST ====\n";
+                    for(int i = 0; i < m_PedIfpFile.Ifp.Animations.Count; i++)
+                    {
+                        animList += m_PedIfpFile.Ifp.Animations[i].Name + "\n";
+                    }
+                    Debug.Log(animList);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Failed to load ped animations from '{pedIfpPath}': {exception.Message}");
+                m_PedIfpFile = null;
+            }
+        }
+
+        private IfpAnimation FindPedAnimation(string preferredAnimationName)
+        {
+            IfpAnimation fallback = null;
+
+            foreach (IfpAnimation animation in m_PedIfpFile.Ifp.Animations)
+            {
+                if (animation.Objects == null || animation.Objects.Count == 0)
+                {
+                    continue;
+                }
+
+                fallback ??= animation;
+
+                if (!string.IsNullOrEmpty(preferredAnimationName) &&
+                    string.Equals(
+                        animation.Name,
+                        preferredAnimationName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return animation;
+                }
+            }
+
+            return fallback;
+        }
+
+        public void PrintPedAnimations()
+        {
+            string anims = string.Empty;
+            foreach (IfpAnimation animation in m_PedIfpFile.Ifp.Animations)
+            {
+                if (animation.Objects == null || animation.Objects.Count == 0)
+                {
+                    continue;
+                }
+
+                anims += animation.Name + "\n";
+            }
         }
     }
 }

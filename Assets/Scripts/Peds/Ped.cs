@@ -7,6 +7,9 @@ namespace GTA3Unity.Peds
 {
     public class Ped: MonoBehaviour
     {
+        private static readonly Quaternion s_ModelBasisRotation =
+            Quaternion.Euler(-90.0f, 0.0f, 0.0f);
+
         private GameObject m_PedModel;
 
         private IEnumerator Start()
@@ -23,7 +26,22 @@ namespace GTA3Unity.Peds
                 randIndex = Random.Range(0, 126);
             }
 
-            m_PedModel = GameObject.Instantiate<GameObject>(FileLoader.Instance.GetModel(randIndex));
+            GameObject template = FileLoader.Instance.GetModel(randIndex);
+
+            if (template == null)
+            {
+                Debug.LogWarning($"Could not load ped model {randIndex}.");
+                yield break;
+            }
+
+            m_PedModel = GameObject.Instantiate<GameObject>(template);
+            m_PedModel.name = template.name.Replace("_Template", string.Empty);
+            m_PedModel.transform.SetParent(transform, worldPositionStays: false);
+            m_PedModel.transform.localPosition = Vector3.zero;
+            m_PedModel.transform.localRotation = s_ModelBasisRotation;
+            m_PedModel.transform.localScale = Vector3.one;
+            m_PedModel.SetActive(true);
+            FileLoader.Instance.PlayPedAnimation(m_PedModel);
         }
     }
 }
