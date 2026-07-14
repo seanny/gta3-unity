@@ -156,6 +156,11 @@ namespace GTA3Unity
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
             m_TxdMaterialCache = new TxdMaterialCache(m_MainImg, m_FallbackMaterial);
+            m_TxdMaterialCache.RegisterLooseTxdDirectory(
+                Path.Combine(GameManager.Instance.GtaDirectory, "models"));
+            m_TxdMaterialCache.RegisterTxdFile(
+                "generic",
+                Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
             LoadPedAnimations();
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "default.dat")));
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "gta3.dat")));
@@ -168,6 +173,7 @@ namespace GTA3Unity
                     string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
+                    m_TxdMaterialCache.RegisterTxdParents(ideFile.Ide.Txdps);
                     m_Peds.AddRange(ideFile.Ide.Peds);
                 }
             }

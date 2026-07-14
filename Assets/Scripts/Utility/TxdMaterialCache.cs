@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using RenderWareIo;
 using RenderWareIo.Structs.Dff;
+using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Txd;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -14,12 +15,17 @@ namespace GTA3Unity.Utility
 {
     public sealed class TxdMaterialCache
     {
+        private const string GenericTxdName = "generic";
+
         private readonly ImgFile m_ImgFile;
         private readonly UnityEngine.Material m_FallbackMaterial;
         private readonly Dictionary<string, TxdFile> m_TxdFiles = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, TxdTexture> m_TxdTextures = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Texture2D> m_Textures = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, UnityEngine.Material> m_Materials = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> m_TxdParents = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<string>> m_TxdChildren = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> m_LooseTxdDirectories = new();
         private readonly HashSet<string> m_Warnings = new(StringComparer.OrdinalIgnoreCase);
 
         private int m_TxdCacheHits;
@@ -31,6 +37,104 @@ namespace GTA3Unity.Utility
         {
             m_ImgFile = imgFile ?? throw new ArgumentNullException(nameof(imgFile));
             m_FallbackMaterial = fallbackMaterial;
+        }
+
+        public void RegisterLooseTxdDirectory(string directoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return;
+            }
+
+            string normalizedPath = Path.GetFullPath(directoryPath);
+
+            if (!Directory.Exists(normalizedPath))
+            {
+                WarnOnce(
+                    $"missing-loose-txd-directory:{normalizedPath}",
+                    $"Could not find loose TXD directory '{normalizedPath}'.");
+                return;
+            }
+
+            if (m_LooseTxdDirectories.Exists(path => string.Equals(
+                    path,
+                    normalizedPath,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            m_LooseTxdDirectories.Add(normalizedPath);
+        }
+
+        public bool RegisterTxdFile(string txdName, string path)
+        {
+            string txdKey = NormalizeName(txdName);
+
+            if (string.IsNullOrEmpty(txdKey) ||
+                string.IsNullOrEmpty(path))
+            {
+                return false;
+            }
+
+            if (!File.Exists(path))
+            {
+                WarnOnce(
+                    $"missing-loose-txd:{txdKey}",
+                    $"Could not find loose TXD '{path}'.");
+                return false;
+            }
+
+            try
+            {
+                m_TxdFiles[txdKey] = new TxdFile(path);
+                Debug.Log($"Loaded loose TXD '{txdKey}' from '{path}'.");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                WarnOnce(
+                    $"bad-loose-txd:{txdKey}",
+                    $"Failed to load loose TXD '{path}': {exception.Message}");
+                return false;
+            }
+        }
+
+        public void RegisterTxdParents(IEnumerable<Txdp> txdParents)
+        {
+            if (txdParents == null)
+            {
+                return;
+            }
+
+            foreach (Txdp txdParent in txdParents)
+            {
+                string sourceTxd = NormalizeName(txdParent.SourceTxd);
+                string targetTxd = NormalizeName(txdParent.TargetTxd);
+
+                if (string.IsNullOrEmpty(sourceTxd) ||
+                    string.IsNullOrEmpty(targetTxd) ||
+                    string.Equals(sourceTxd, targetTxd, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                m_TxdParents[sourceTxd] = targetTxd;
+
+                if (!m_TxdChildren.TryGetValue(targetTxd, out List<string> children))
+                {
+                    children = new List<string>();
+                    m_TxdChildren[targetTxd] = children;
+                }
+
+                if (!children.Exists(child => string.Equals(
+                        child,
+                        sourceTxd,
+                        StringComparison.OrdinalIgnoreCase)))
+                {
+                    children.Add(sourceTxd);
+                }
+            }
         }
 
         public UnityEngine.Material[] CreateMaterials(string txdName, Geometry geometry)
@@ -72,14 +176,14 @@ namespace GTA3Unity.Utility
                 return Fallback($"empty-texture-name:{NormalizeName(txdName)}:{materialIndex}");
             }
 
-            Texture2D texture = LoadTexture(txdName, textureName);
+            Texture2D texture = LoadTexture(txdName, textureName, out string resolvedTxdName);
 
             if (texture == null)
             {
                 return Fallback($"missing-texture:{NormalizeName(txdName)}:{textureName}");
             }
 
-            string materialKey = $"{NormalizeName(txdName)}/{textureName}";
+            string materialKey = $"{resolvedTxdName}/{textureName}";
 
             if (m_Materials.TryGetValue(materialKey, out UnityEngine.Material cachedMaterial))
             {
@@ -111,9 +215,13 @@ namespace GTA3Unity.Utility
             return material;
         }
 
-        private Texture2D LoadTexture(string txdName, string textureName)
+        private Texture2D LoadTexture(
+            string txdName,
+            string textureName,
+            out string resolvedTxdName)
         {
             string txdKey = NormalizeName(txdName);
+            resolvedTxdName = txdKey;
 
             if (string.IsNullOrEmpty(txdKey))
             {
@@ -128,11 +236,22 @@ namespace GTA3Unity.Utility
                 return cachedTexture;
             }
 
-            TxdTexture txdTexture = FindTxdTexture(txdKey, textureName);
+            TxdTexture txdTexture = FindTxdTexture(
+                txdKey,
+                textureName,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                out resolvedTxdName);
 
             if (txdTexture?.Data == null)
             {
                 return null;
+            }
+
+            textureKey = $"{resolvedTxdName}/{textureName}";
+
+            if (m_Textures.TryGetValue(textureKey, out cachedTexture))
+            {
+                return cachedTexture;
             }
 
             Texture2D texture = DecodeTexture(textureKey, txdTexture.Data);
@@ -147,8 +266,22 @@ namespace GTA3Unity.Utility
             return texture;
         }
 
-        private TxdTexture FindTxdTexture(string txdName, string textureName)
+        private TxdTexture FindTxdTexture(
+            string txdName,
+            string textureName,
+            HashSet<string> visitedTxdNames,
+            out string resolvedTxdName)
         {
+            resolvedTxdName = txdName;
+
+            if (!visitedTxdNames.Add(txdName))
+            {
+                WarnOnce(
+                    $"txd-parent-cycle:{txdName}",
+                    $"Detected a TXD parent cycle while resolving '{textureName}' from '{txdName}'.");
+                return null;
+            }
+
             string textureKey = $"{txdName}/{textureName}";
 
             if (m_TxdTextures.TryGetValue(textureKey, out TxdTexture cachedTexture))
@@ -185,11 +318,95 @@ namespace GTA3Unity.Utility
                 return cachedTexture;
             }
 
+            if (m_TxdParents.TryGetValue(txdName, out string parentTxdName))
+            {
+                TxdTexture parentTexture = FindTxdTexture(
+                    parentTxdName,
+                    textureName,
+                    visitedTxdNames,
+                    out resolvedTxdName);
+
+                if (parentTexture != null)
+                {
+                    return parentTexture;
+                }
+            }
+
+            if (m_TxdChildren.TryGetValue(txdName, out List<string> childTxdNames))
+            {
+                foreach (string childTxdName in childTxdNames)
+                {
+                    TxdTexture childTexture = FindTxdTexture(
+                        childTxdName,
+                        textureName,
+                        visitedTxdNames,
+                        out resolvedTxdName);
+
+                    if (childTexture != null)
+                    {
+                        return childTexture;
+                    }
+                }
+            }
+
+            if (!string.Equals(txdName, GenericTxdName, StringComparison.OrdinalIgnoreCase))
+            {
+                TxdTexture genericTexture = FindTxdTextureInSingleDictionary(
+                    GenericTxdName,
+                    textureName);
+
+                if (genericTexture != null)
+                {
+                    resolvedTxdName = GenericTxdName;
+                    return genericTexture;
+                }
+            }
+
             WarnOnce(
                 $"missing-texture:{textureKey}",
-                $"TXD '{txdName}' does not contain texture '{textureName}'.");
+                $"TXD '{txdName}' and related TXD dictionaries do not contain texture '{textureName}'.");
 
             return null;
+        }
+
+        private TxdTexture FindTxdTextureInSingleDictionary(
+            string txdName,
+            string textureName)
+        {
+            string textureKey = $"{txdName}/{textureName}";
+
+            if (m_TxdTextures.TryGetValue(textureKey, out TxdTexture cachedTexture))
+            {
+                return cachedTexture;
+            }
+
+            TxdFile txdFile = LoadTxd(txdName);
+
+            if (txdFile?.Txd?.TextureContainer?.Textures == null)
+            {
+                return null;
+            }
+
+            foreach (TxdTexture texture in txdFile.Txd.TextureContainer.Textures)
+            {
+                string candidateName = NormalizeName(texture.Data?.TextureName);
+
+                if (string.IsNullOrEmpty(candidateName))
+                {
+                    continue;
+                }
+
+                string candidateKey = $"{txdName}/{candidateName}";
+
+                if (!m_TxdTextures.ContainsKey(candidateKey))
+                {
+                    m_TxdTextures[candidateKey] = texture;
+                }
+            }
+
+            return m_TxdTextures.TryGetValue(textureKey, out cachedTexture)
+                ? cachedTexture
+                : null;
         }
 
         private TxdFile LoadTxd(string txdName)
@@ -202,28 +419,64 @@ namespace GTA3Unity.Utility
 
             string fileName = $"{txdName}.txd";
 
-            if (!m_ImgFile.Contains(fileName))
+            if (m_ImgFile.Contains(fileName))
             {
-                m_TxdCacheMisses++;
-                WarnOnce(
-                    $"missing-txd:{txdName}",
-                    $"Could not find TXD '{fileName}' in gta3.img.");
-                return null;
+                try
+                {
+                    TxdFile txdFile = new TxdFile(m_ImgFile[fileName].GetData());
+                    m_TxdFiles[txdName] = txdFile;
+                    return txdFile;
+                }
+                catch (Exception exception)
+                {
+                    WarnOnce(
+                        $"bad-txd:{txdName}",
+                        $"Failed to load TXD '{fileName}': {exception.Message}");
+                    return null;
+                }
             }
 
-            try
+            if (TryLoadLooseTxd(txdName, out TxdFile looseTxdFile))
             {
-                TxdFile txdFile = new TxdFile(m_ImgFile[fileName].GetData());
-                m_TxdFiles[txdName] = txdFile;
-                return txdFile;
+                return looseTxdFile;
             }
-            catch (Exception exception)
+
+            m_TxdCacheMisses++;
+            WarnOnce(
+                $"missing-txd:{txdName}",
+                $"Could not find TXD '{fileName}' in gta3.img or registered loose TXD directories.");
+            return null;
+        }
+
+        private bool TryLoadLooseTxd(string txdName, out TxdFile txdFile)
+        {
+            txdFile = null;
+
+            foreach (string directoryPath in m_LooseTxdDirectories)
             {
-                WarnOnce(
-                    $"bad-txd:{txdName}",
-                    $"Failed to load TXD '{fileName}': {exception.Message}");
-                return null;
+                string path = Path.Combine(directoryPath, $"{txdName}.txd");
+
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    txdFile = new TxdFile(path);
+                    m_TxdFiles[txdName] = txdFile;
+                    return true;
+                }
+                catch (Exception exception)
+                {
+                    WarnOnce(
+                        $"bad-loose-txd:{txdName}:{path}",
+                        $"Failed to load loose TXD '{path}': {exception.Message}");
+                    return false;
+                }
             }
+
+            return false;
         }
 
         private Texture2D DecodeTexture(string textureKey, TextureData data)
@@ -261,18 +514,15 @@ namespace GTA3Unity.Utility
                     return dxt3Texture;
                 }
 
-                if (!IsKnownUnsupportedCompressedFormat(data.TextureFormat))
+                if (TryDecodeDxt5Texture(textureKey, data, out Texture2D dxt5Texture))
                 {
-                    WarnOnce(
-                        $"unsupported-format:{textureKey}:{data.TextureFormat}:{data.Depth}",
-                        $"Texture '{textureKey}' has unsupported format '{data.TextureFormatString}' " +
-                        $"depth {data.Depth}, data size {data.Data.Length}.");
-                    return null;
+                    return dxt5Texture;
                 }
 
                 WarnOnce(
-                    $"unsupported-compressed-format:{textureKey}:{data.TextureFormat}",
-                    $"Texture '{textureKey}' uses unsupported compressed format '{data.TextureFormatString}'.");
+                    $"unsupported-format:{textureKey}:{data.TextureFormat}:{data.Depth}",
+                    $"Texture '{textureKey}' has unsupported format '{data.TextureFormatString}' " +
+                    $"depth {data.Depth}, data size {data.Data.Length}.");
                 return null;
             }
             catch (Exception exception)
@@ -518,7 +768,7 @@ namespace GTA3Unity.Utility
         {
             texture = null;
 
-            if (data.TextureFormat != FourCc("DXT3") ||
+            if (!IsDxt3(data.TextureFormat) ||
                 data.Data.Length != GetDxt5Size(data.Width, data.Height))
             {
                 return false;
@@ -565,6 +815,70 @@ namespace GTA3Unity.Utility
             return true;
         }
 
+        private static bool TryDecodeDxt5Texture(
+            string textureKey,
+            TextureData data,
+            out Texture2D texture)
+        {
+            texture = null;
+
+            if (!IsDxt5(data.TextureFormat) ||
+                data.Data.Length != GetDxt5Size(data.Width, data.Height))
+            {
+                return false;
+            }
+
+            Color32[] colors = new Color32[data.Width * data.Height];
+            int offset = 0;
+
+            for (int y = 0; y < data.Height; y += 4)
+            {
+                for (int x = 0; x < data.Width; x += 4)
+                {
+                    byte alpha0 = data.Data[offset];
+                    byte alpha1 = data.Data[offset + 1];
+                    ulong alphaIndices = 0;
+
+                    for (int i = 0; i < 6; i++)
+                    {
+                        alphaIndices |= (ulong)data.Data[offset + 2 + i] << (8 * i);
+                    }
+
+                    ushort color0 = BitConverter.ToUInt16(data.Data, offset + 8);
+                    ushort color1 = BitConverter.ToUInt16(data.Data, offset + 10);
+                    uint colorIndices = BitConverter.ToUInt32(data.Data, offset + 12);
+                    offset += 16;
+
+                    Color32[] blockColors = CreateDxtColorTable(color0, color1, hasDxt1Alpha: false);
+                    byte[] blockAlphas = CreateDxt5AlphaTable(alpha0, alpha1);
+
+                    for (int yy = 0; yy < 4; yy++)
+                    {
+                        for (int xx = 0; xx < 4; xx++)
+                        {
+                            int targetX = x + xx;
+                            int targetY = data.Height - y - yy - 1;
+
+                            if (targetX < data.Width && targetY >= 0)
+                            {
+                                int colorIndex = (int)(colorIndices & 0x03);
+                                int alphaIndex = (int)(alphaIndices & 0x07);
+                                Color32 color = blockColors[colorIndex];
+                                color.a = blockAlphas[alphaIndex];
+                                colors[targetX + (data.Width * targetY)] = color;
+                            }
+
+                            colorIndices >>= 2;
+                            alphaIndices >>= 3;
+                        }
+                    }
+                }
+            }
+
+            texture = CreateTexture(textureKey, data.Width, data.Height, colors);
+            return true;
+        }
+
         private static Color32[] CreateDxtColorTable(
             ushort color0,
             ushort color1,
@@ -601,6 +915,44 @@ namespace GTA3Unity.Utility
                 (byte)((color0.g * weight0 + color1.g * weight1) / total),
                 (byte)((color0.b * weight0 + color1.b * weight1) / total),
                 (byte)((color0.a * weight0 + color1.a * weight1) / total));
+        }
+
+        private static byte[] CreateDxt5AlphaTable(byte alpha0, byte alpha1)
+        {
+            byte[] alphas = new byte[8];
+            alphas[0] = alpha0;
+            alphas[1] = alpha1;
+
+            if (alpha0 > alpha1)
+            {
+                alphas[2] = LerpByte(alpha0, alpha1, 6, 1, 7);
+                alphas[3] = LerpByte(alpha0, alpha1, 5, 2, 7);
+                alphas[4] = LerpByte(alpha0, alpha1, 4, 3, 7);
+                alphas[5] = LerpByte(alpha0, alpha1, 3, 4, 7);
+                alphas[6] = LerpByte(alpha0, alpha1, 2, 5, 7);
+                alphas[7] = LerpByte(alpha0, alpha1, 1, 6, 7);
+            }
+            else
+            {
+                alphas[2] = LerpByte(alpha0, alpha1, 4, 1, 5);
+                alphas[3] = LerpByte(alpha0, alpha1, 3, 2, 5);
+                alphas[4] = LerpByte(alpha0, alpha1, 2, 3, 5);
+                alphas[5] = LerpByte(alpha0, alpha1, 1, 4, 5);
+                alphas[6] = 0;
+                alphas[7] = 255;
+            }
+
+            return alphas;
+        }
+
+        private static byte LerpByte(
+            byte value0,
+            byte value1,
+            int weight0,
+            int weight1,
+            int divisor)
+        {
+            return (byte)((value0 * weight0 + value1 * weight1) / divisor);
         }
 
         private static Color32 DecodeRgb565(ushort value)
@@ -678,10 +1030,15 @@ namespace GTA3Unity.Utility
                 data.TextureFormat == FourCc("DXT1");
         }
 
-        private static bool IsKnownUnsupportedCompressedFormat(uint textureFormat)
+        private static bool IsDxt3(uint textureFormat)
         {
             return textureFormat == FourCc("DXT2") ||
-                textureFormat == FourCc("DXT4") ||
+                textureFormat == FourCc("DXT3");
+        }
+
+        private static bool IsDxt5(uint textureFormat)
+        {
+            return textureFormat == FourCc("DXT4") ||
                 textureFormat == FourCc("DXT5");
         }
 
