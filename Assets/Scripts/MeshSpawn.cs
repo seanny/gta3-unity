@@ -111,6 +111,14 @@ namespace GTA3Unity
             s_TemplateMisses++;
 
             string dffName = $"{meshObj.ModelName}.dff";
+
+            if (!imgFileToReadFrom.Contains(dffName))
+            {
+                Debug.LogWarning($"Could not find DFF '{dffName}'.");
+                s_SpawnFailures++;
+                return null;
+            }
+
             GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
             DffFile dffFile = new DffFile(entry.GetData());
 

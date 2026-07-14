@@ -18,22 +18,28 @@ namespace GTA3Unity.Peds
         #region Unity Lifecycle
         private IEnumerator Start()
         {
-            Debug.Assert(FileLoader.Instance != null);
-            while(!FileLoader.Instance.IsDone)
+            while(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
             {
                 yield return null;
             }
 
-            m_StateMachine = new PedStateMachine(this);
+            m_NavMeshAgent = GetComponent<NavMeshAgent>();
 
-            int randIndex = Random.Range(0, 127);
-            while(randIndex >= 26 && randIndex <= 29)
+            if (m_NavMeshAgent == null)
             {
-                // Ranges 26-29 are invalid
-                randIndex = Random.Range(0, 126);
+                m_NavMeshAgent = gameObject.AddComponent<NavMeshAgent>();
             }
 
-            SetModel(randIndex);
+            if (FileLoader.Instance.TryGetRandomPedModelIndex(out int modelIndex))
+            {
+                SetModel(modelIndex);
+            }
+            else
+            {
+                Debug.LogWarning("Could not find any loadable ped models.");
+            }
+
+            m_StateMachine = new PedStateMachine(this);
         }
 
         private void Update()

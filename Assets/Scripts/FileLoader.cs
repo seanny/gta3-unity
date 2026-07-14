@@ -70,6 +70,35 @@ namespace GTA3Unity
             return null;
         }
 
+        public bool TryGetRandomPedModelIndex(out int modelIndex)
+        {
+            List<int> candidates = new();
+
+            foreach (RenderWareIo.Structs.Ide.Ped ped in m_Peds)
+            {
+                if (ped.Id == 0 ||
+                    ped.Id >= 26 && ped.Id <= 29 ||
+                    string.IsNullOrEmpty(ped.ModelName))
+                {
+                    continue;
+                }
+
+                if (m_MainImg != null && m_MainImg.Contains($"{ped.ModelName}.dff"))
+                {
+                    candidates.Add(ped.Id);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                modelIndex = -1;
+                return false;
+            }
+
+            modelIndex = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+            return true;
+        }
+
         public bool PlayPedAnimation(
             GameObject pedModel,
             string preferredAnimationName = "idle_stance")
@@ -143,7 +172,7 @@ namespace GTA3Unity
                 }
             }
 
-            LoadWorldMap();
+            //LoadWorldMap();
         }
 
         public void LoadWorldMap()
