@@ -257,8 +257,8 @@ namespace GTA3Unity.Utility
 
         private static Quaternion ConvertFrameRotation(Frame frame)
         {
-            Vector3 up = ConvertVector(frame.Rot2);
-            Vector3 forward = ConvertVector(frame.Rot3);
+            Vector3 up = ConvertVector(frame.Rot3);
+            Vector3 forward = ConvertVector(frame.Rot2);
 
             if (up.sqrMagnitude < 0.0001f || forward.sqrMagnitude < 0.0001f)
             {
