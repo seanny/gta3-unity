@@ -23,6 +23,7 @@ namespace GTA3Unity
 
         public bool IsDone => m_IsDone;
         public ImgFile MainImg => m_MainImg;
+        public bool MapLoaded => m_MapLoaded;
 
         [SerializeField] private NavMeshSurface m_Surface;
 
@@ -43,7 +44,7 @@ namespace GTA3Unity
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
         private IfpFile m_PedIfpFile;
-        private bool m_IsDone;
+        private bool m_IsDone, m_MapLoaded;
         [SerializeField] private bool m_PrintAnims = false;
 
         void Awake()
@@ -187,7 +188,8 @@ namespace GTA3Unity
                 }
             }
 
-            StartCoroutine(LoadWorldMap());
+            LoadingScreen.Instance.HideSplashScreen();
+            //StartCoroutine(LoadWorldMap());
         }
 
         public IEnumerator LoadWorldMap()
@@ -276,6 +278,7 @@ namespace GTA3Unity
             m_Surface.BuildNavMesh();
             loadTimer.Stop();
             Debug.Log($"Created navmesh in {loadTimer.ElapsedMilliseconds} ms.");
+            m_MapLoaded = true;
         }
 
         private void LoadPedAnimations()
