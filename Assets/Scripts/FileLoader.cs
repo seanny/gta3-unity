@@ -167,7 +167,7 @@ namespace GTA3Unity
             m_TxdMaterialCache = new TxdMaterialCache();
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "txd"));
             m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
-            LoadingScreen.Instance.ShowSplashScreen("loadsc0");
+            LoadingScreen.Instance.ShowSplashScreen("mainsc1");
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
             m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
             LoadPedAnimations();

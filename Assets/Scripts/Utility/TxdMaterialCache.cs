@@ -208,10 +208,11 @@ namespace GTA3Unity.Utility
                 material.SetTexture("_MainTex", texture);
             }
 
-            if (material.HasProperty("_Cull"))
-            {
-                material.SetFloat("_Cull", (float)CullMode.Back);
-            }
+            material.SetFloat("_Cull", (float)CullMode.Off);
+            // if (material.HasProperty("_Cull"))
+            // {
+            //     material.SetFloat("_Cull", (float)CullMode.Off);
+            // }
 
             m_Materials[materialKey] = material;
             return material;
