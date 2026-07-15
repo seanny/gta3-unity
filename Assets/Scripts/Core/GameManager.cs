@@ -83,6 +83,7 @@ namespace GTA3Unity.Core
                     break;
                 case EGameState.InitialiseOnce:
                     FileLoader.Instance.Init();
+                    m_GameState++;
                     break;
             }
         }

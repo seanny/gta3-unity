@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using GTA3Unity.Utility;
@@ -12,6 +13,7 @@ using Unity.Burst.Intrinsics;
 using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
+using GTA3Unity.UI;
 
 namespace GTA3Unity
 {
@@ -144,6 +146,13 @@ namespace GTA3Unity
             return true;
         }
 
+        public Texture2D GetFrontendTexture(string textureName)
+        {
+            // Frontend textures
+            m_TxdMaterialCache.LoadTexture(textureName, textureName, out string _);
+            return m_TxdMaterialCache.Textures[$"{textureName}/{textureName}"];
+        }
+
         public void Init()
         {
             if (m_IsDone == true)
@@ -155,12 +164,12 @@ namespace GTA3Unity
             Debug.Log("FileLoader.Init begin");
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
-            m_TxdMaterialCache = new TxdMaterialCache(m_MainImg, m_FallbackMaterial);
-            m_TxdMaterialCache.RegisterLooseTxdDirectory(
-                Path.Combine(GameManager.Instance.GtaDirectory, "models"));
-            m_TxdMaterialCache.RegisterTxdFile(
-                "generic",
-                Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
+            m_TxdMaterialCache = new TxdMaterialCache();
+            m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "txd"));
+            m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
+            LoadingScreen.Instance.ShowSplashScreen("loadsc0");
+            m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
+            m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
             LoadPedAnimations();
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "default.dat")));
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "gta3.dat")));
@@ -178,15 +187,17 @@ namespace GTA3Unity
                 }
             }
 
-            LoadWorldMap();
+            StartCoroutine(LoadWorldMap());
         }
 
-        public void LoadWorldMap()
+        public IEnumerator LoadWorldMap()
         {
             if(m_IsDone == false)
             {
-                return;
+                yield break;
             }
+
+            LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
 
             Dictionary<int, IdeObj> objectsById = new();
             Dictionary<string, IdeObj> objectsByModelName = new(StringComparer.OrdinalIgnoreCase);
@@ -242,9 +253,17 @@ namespace GTA3Unity
                         {
                             spawnedCount++;
                         }
+                        if(spawnedCount % 1000 == 0)
+                        {
+                            // Occasionally change the loading screen
+                            LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
+                        }
+                        yield return null;
                     }
                 }
             }
+
+            LoadingScreen.Instance.HideSplashScreen();
 
             loadTimer.Stop();
             Debug.Log(

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
-using UnityEditor.Rendering;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace RenderWareIo.Structs.Ide
@@ -43,7 +44,7 @@ namespace RenderWareIo.Structs.Ide
             this.Class = splits[6];
             this.Frequency = int.Parse(splits[7]);
             this.Level = int.Parse(splits[8]);
-            this.CompRules = Convert.ToUInt32(splits[9].ReplaceInvalidFileNameCharacters(""), 16);
+            this.CompRules = Convert.ToUInt32(ReplaceInvalidFileNameCharacters(splits[9], ""), 16);
             if(Type == "car")
             {
                 this.WheelModelId = int.Parse(splits[10]);
@@ -54,6 +55,13 @@ namespace RenderWareIo.Structs.Ide
                 this.LODModel = int.Parse(splits[10]);
             }
             return this;
+        }
+
+        private string ReplaceInvalidFileNameCharacters(string fileName, string replacement)
+        {
+            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            Regex r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
+            return r.Replace(fileName, replacement);
         }
 
         public string Write()

@@ -17,8 +17,10 @@ namespace GTA3Unity.Utility
     {
         private const string GenericTxdName = "generic";
 
-        private readonly ImgFile m_ImgFile;
-        private readonly UnityEngine.Material m_FallbackMaterial;
+        public IReadOnlyDictionary<string, Texture2D> Textures => m_Textures;
+
+        private ImgFile m_ImgFile;
+        private UnityEngine.Material m_FallbackMaterial;
         private readonly Dictionary<string, TxdFile> m_TxdFiles = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, TxdTexture> m_TxdTextures = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Texture2D> m_Textures = new(StringComparer.OrdinalIgnoreCase);
@@ -33,7 +35,7 @@ namespace GTA3Unity.Utility
         private int m_DecodedTextureCount;
         private int m_FallbackSlotCount;
 
-        public TxdMaterialCache(ImgFile imgFile, UnityEngine.Material fallbackMaterial)
+        public void SetImageFile(ImgFile imgFile, UnityEngine.Material fallbackMaterial)
         {
             m_ImgFile = imgFile ?? throw new ArgumentNullException(nameof(imgFile));
             m_FallbackMaterial = fallbackMaterial;
@@ -215,7 +217,7 @@ namespace GTA3Unity.Utility
             return material;
         }
 
-        private Texture2D LoadTexture(
+        public Texture2D LoadTexture(
             string txdName,
             string textureName,
             out string resolvedTxdName)
