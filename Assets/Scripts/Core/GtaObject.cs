@@ -9,15 +9,24 @@ namespace GTA3Unity.Core
 
         protected GameObject m_PedModel;
 
-        public void PlayAnimation(string animName)
+        public bool PlayAnimation(
+            string animName,
+            float fadeLength = 0.15f,
+            WrapMode wrapMode = WrapMode.Loop,
+            bool makeInPlace = false)
         {
             if(m_PedModel == null)
             {
                 Debug.LogError($"Ped {name} does not have a PedModel attached.");
-                return;
+                return false;
             }
 
-            FileLoader.Instance.PlayPedAnimation(m_PedModel, animName);
+            return FileLoader.Instance.PlayPedAnimation(
+                m_PedModel,
+                animName,
+                fadeLength,
+                wrapMode,
+                makeInPlace);
         }
 
         public void SetModel(int modelIndex)

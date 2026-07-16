@@ -91,6 +91,7 @@ namespace GTA3Unity.Core
         private float _rotationVelocity;
         private float _verticalVelocity;
         private float _terminalVelocity = 53.0f;
+        private string _currentAnimation;
 
         // timeout deltatime
         private float _jumpTimeoutDelta;
@@ -112,6 +113,12 @@ namespace GTA3Unity.Core
         private GameObject _mainCamera;
 
         private const float _threshold = 0.01f;
+        private const float AnimationFadeLength = 0.15f;
+        private const string IdleAnimation = "idle_stance";
+        private const string WalkAnimation = "walk_player";
+        private const string RunAnimation = "run_civi";
+        private const string SprintAnimation = "sprint_civi";
+        private const string FallAnimation = "FALL_fall";
 
         private bool IsCurrentDeviceMouse
         {
@@ -211,11 +218,6 @@ namespace GTA3Unity.Core
                 transform.position.z);
             Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers,
                 QueryTriggerInteraction.Ignore);
-
-            if(Grounded)
-            {
-                base.PlayAnimation("FALL_land");
-            }
         }
 
         private void CameraRotation()
@@ -280,8 +282,10 @@ namespace GTA3Unity.Core
             Vector3 inputDirection = new Vector3(_input.move.x, 0.0f, _input.move.y).normalized;
 
             // note: Vector2's != operator uses approximation so is not floating point error prone, and is cheaper than magnitude
+            bool hasMoveInput = _input.move != Vector2.zero;
+
             // if there is a move input rotate player when the player is moving
-            if (_input.move != Vector2.zero)
+            if (hasMoveInput)
             {
                 _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                                   _mainCamera.transform.eulerAngles.y;
@@ -290,11 +294,6 @@ namespace GTA3Unity.Core
 
                 // rotate to face input direction relative to camera position
                 transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
-                base.PlayAnimation("run_civi");
-            }
-            else
-            {
-                base.PlayAnimation("idle_stance");
             }
 
 
@@ -304,7 +303,7 @@ namespace GTA3Unity.Core
             _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
                              new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
 
-            // update animator if using character
+            UpdateMovementAnimation(hasMoveInput, targetSpeed);
         }
 
         private void JumpAndGravity()
@@ -313,9 +312,6 @@ namespace GTA3Unity.Core
             {
                 // reset the fall timeout timer
                 _fallTimeoutDelta = FallTimeout;
-
-                // update animator if using character
-                base.PlayAnimation("FALL_land");
 
                 // stop our velocity dropping infinitely when grounded
                 if (_verticalVelocity < 0.0f)
@@ -328,9 +324,6 @@ namespace GTA3Unity.Core
                 {
                     // the square root of H * -2 * G = how much velocity needed to reach desired height
                     _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
-
-                    // update animator if using character
-                    base.PlayAnimation("FALL_fall");
                 }
 
                 // jump timeout
@@ -351,8 +344,7 @@ namespace GTA3Unity.Core
                 }
                 else
                 {
-                    // update animator if using character
-                    base.PlayAnimation("FALL_fall");
+                    PlayPlayerAnimation(FallAnimation);
                 }
 
                 // if we are not grounded, do not jump
@@ -364,6 +356,53 @@ namespace GTA3Unity.Core
             {
                 _verticalVelocity += Gravity * Time.deltaTime;
             }
+        }
+
+        private void UpdateMovementAnimation(bool hasMoveInput, float targetSpeed)
+        {
+            if (!Grounded)
+            {
+                PlayPlayerAnimation(FallAnimation);
+                return;
+            }
+
+            if (!hasMoveInput || targetSpeed <= 0.0f)
+            {
+                PlayPlayerAnimation(IdleAnimation);
+                return;
+            }
+
+            if (_input.sprint)
+            {
+                PlayPlayerAnimation(SprintAnimation);
+                return;
+            }
+
+            PlayPlayerAnimation(targetSpeed <= MoveSpeed ? WalkAnimation : RunAnimation);
+        }
+
+        private void PlayPlayerAnimation(string animationName)
+        {
+            if (_currentAnimation == animationName)
+            {
+                return;
+            }
+
+            if (base.PlayAnimation(
+                animationName,
+                AnimationFadeLength,
+                WrapMode.Loop,
+                IsLocomotionAnimation(animationName)))
+            {
+                _currentAnimation = animationName;
+            }
+        }
+
+        private static bool IsLocomotionAnimation(string animationName)
+        {
+            return animationName == WalkAnimation ||
+                animationName == RunAnimation ||
+                animationName == SprintAnimation;
         }
 
         private static float ClampAngle(float lfAngle, float lfMin, float lfMax)

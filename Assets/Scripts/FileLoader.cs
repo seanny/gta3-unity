@@ -104,7 +104,10 @@ namespace GTA3Unity
 
         public bool PlayPedAnimation(
             GameObject pedModel,
-            string preferredAnimationName = "idle_stance")
+            string preferredAnimationName = "idle_stance",
+            float fadeLength = 0.15f,
+            WrapMode wrapMode = WrapMode.Loop,
+            bool makeInPlace = false)
         {
             if (pedModel == null || m_PedIfpFile?.Ifp?.Animations == null)
             {
@@ -119,20 +122,6 @@ namespace GTA3Unity
                 return false;
             }
 
-            AnimationClip clip;
-
-            try
-            {
-                clip = IfpAnimationConverter.CreateLegacyClip(
-                    animation,
-                    pedModel.transform);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"Failed to build ped animation '{animation.Name}': {exception.Message}");
-                return false;
-            }
-
             Animation animationComponent = pedModel.GetComponent<Animation>();
 
             if (animationComponent == null)
@@ -140,10 +129,49 @@ namespace GTA3Unity
                 animationComponent = pedModel.AddComponent<Animation>();
             }
 
-            animationComponent.AddClip(clip, clip.name);
+            string clipName = makeInPlace ? $"{animation.Name}_InPlace" : animation.Name;
+            AnimationClip clip = animationComponent.GetClip(clipName);
+
+            if (clip == null)
+            {
+                try
+                {
+                    clip = IfpAnimationConverter.CreateLegacyClip(
+                        animation,
+                        pedModel.transform,
+                        makeInPlace);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"Failed to build ped animation '{animation.Name}': {exception.Message}");
+                    return false;
+                }
+
+                clip.name = clipName;
+                animationComponent.AddClip(clip, clip.name);
+            }
+
+            clip.wrapMode = wrapMode;
             animationComponent.clip = clip;
-            animationComponent.wrapMode = WrapMode.Loop;
-            animationComponent.Play(clip.name);
+            animationComponent.wrapMode = wrapMode;
+
+            AnimationState state = animationComponent[clip.name];
+            state.wrapMode = wrapMode;
+
+            if (animationComponent.IsPlaying(clip.name))
+            {
+                return true;
+            }
+
+            if (fadeLength > 0.0f && animationComponent.isPlaying)
+            {
+                animationComponent.CrossFade(clip.name, fadeLength);
+            }
+            else
+            {
+                animationComponent.Play(clip.name);
+            }
+
             return true;
         }
 

@@ -14,7 +14,8 @@ namespace GTA3Unity.Utility
 
         public static AnimationClip CreateLegacyClip(
             IfpAnimation animation,
-            Transform root)
+            Transform root,
+            bool makeInPlace = false)
         {
             if (animation == null)
             {
@@ -51,7 +52,12 @@ namespace GTA3Unity.Utility
 
                 if (HasPositionFrames(obj.Frames))
                 {
-                    AddPositionCurves(clip, path, obj.Frames);
+                    AddPositionCurves(
+                        clip,
+                        path,
+                        obj.Frames,
+                        makeInPlace && IsRootMotionTransform(root, target),
+                        target.localPosition);
                 }
 
                 if (HasScaleFrames(obj.Frames))
@@ -110,7 +116,9 @@ namespace GTA3Unity.Utility
         private static void AddPositionCurves(
             AnimationClip clip,
             string path,
-            List<IfpFrame> frames)
+            List<IfpFrame> frames,
+            bool makeInPlace,
+            Vector3 bindPosition)
         {
             AnimationCurve x = new AnimationCurve();
             AnimationCurve y = new AnimationCurve();
@@ -121,6 +129,12 @@ namespace GTA3Unity.Utility
                 float time = GetFrameTime(frames, frameIndex);
                 Vector3 position = ConvertVector(frames[frameIndex].Position);
 
+                if (makeInPlace)
+                {
+                    position.x = bindPosition.x;
+                    position.z = bindPosition.z;
+                }
+
                 x.AddKey(time, position.x);
                 y.AddKey(time, position.y);
                 z.AddKey(time, position.z);
@@ -129,6 +143,11 @@ namespace GTA3Unity.Utility
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.x", x);
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.y", y);
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.z", z);
+        }
+
+        private static bool IsRootMotionTransform(Transform root, Transform target)
+        {
+            return target == root || target.parent == root;
         }
 
         private static void AddScaleCurves(
