@@ -56,8 +56,7 @@ namespace GTA3Unity.Utility
                         clip,
                         path,
                         obj.Frames,
-                        makeInPlace && IsRootMotionTransform(root, target),
-                        target.localPosition);
+                        makeInPlace);
                 }
 
                 if (HasScaleFrames(obj.Frames))
@@ -117,12 +116,12 @@ namespace GTA3Unity.Utility
             AnimationClip clip,
             string path,
             List<IfpFrame> frames,
-            bool makeInPlace,
-            Vector3 bindPosition)
+            bool makeInPlace)
         {
             AnimationCurve x = new AnimationCurve();
             AnimationCurve y = new AnimationCurve();
             AnimationCurve z = new AnimationCurve();
+            Vector3 firstPosition = ConvertVector(frames[0].Position);
 
             for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
             {
@@ -131,8 +130,8 @@ namespace GTA3Unity.Utility
 
                 if (makeInPlace)
                 {
-                    position.x = bindPosition.x;
-                    position.z = bindPosition.z;
+                    position.x = firstPosition.x;
+                    position.z = firstPosition.z;
                 }
 
                 x.AddKey(time, position.x);
@@ -143,11 +142,6 @@ namespace GTA3Unity.Utility
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.x", x);
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.y", y);
             clip.SetCurve(path, typeof(Transform), "m_LocalPosition.z", z);
-        }
-
-        private static bool IsRootMotionTransform(Transform root, Transform target)
-        {
-            return target == root || target.parent == root;
         }
 
         private static void AddScaleCurves(
