@@ -13,6 +13,8 @@ This is not intended as criticism of either project. Both accomplished valuable 
 
 A legally obtained copy of GTA III for PC is required to use this project.
 
+[![GTA3 inside of Unity](https://img.youtube.com/vi/tCQgV2zoz_A/0.jpg)](https://www.youtube.com/watch?v=tCQgV2zoz_A)
+
 ## Installation
 
 GTA3-Unity requires assets from the PC version of GTA III. You must own a legal copy of the game.
