@@ -13,7 +13,7 @@ This is not intended as criticism of either project. Both accomplished valuable 
 
 A legally obtained copy of GTA III for PC is required to use this project.
 
-[![GTA3 inside of Unity](https://img.youtube.com/vi/tCQgV2zoz_A/0.jpg)](https://www.youtube.com/watch?v=tCQgV2zoz_A)
+[YouTube: GTA3 inside of Unity](https://youtu.be/zGwZTGplLds)
 
 ## Installation
 
