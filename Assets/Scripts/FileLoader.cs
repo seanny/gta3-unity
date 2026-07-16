@@ -216,8 +216,8 @@ namespace GTA3Unity
                 }
             }
 
-            LoadingScreen.Instance.HideSplashScreen();
-            //StartCoroutine(LoadWorldMap());
+            //LoadingScreen.Instance.HideSplashScreen();
+            StartCoroutine(LoadWorldMap());
         }
 
         public IEnumerator LoadWorldMap()

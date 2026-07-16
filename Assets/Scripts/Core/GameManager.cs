@@ -46,6 +46,14 @@ namespace GTA3Unity.Core
             }
         }
 
+        private void Start()
+        {
+            if(!Directory.Exists(m_GtaDirectory))
+            {
+                Debug.LogError($"Cannot access \"{m_GtaDirectory}\": Does not exist");
+            }
+        }
+
         private void OnVideoEnded(VideoPlayer source)
         {
             m_GameState++;

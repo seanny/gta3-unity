@@ -1423,8 +1423,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4923ac39913b5d478a2e53311c6e708, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Core.PlayerController
-  MoveSpeed: 2
-  SprintSpeed: 5.335
+  MoveSpeed: 1
+  SprintSpeed: 10
   RotationSmoothTime: 0.12
   SpeedChangeRate: 10
   AudioFootsteps: {fileID: 1257387644}
