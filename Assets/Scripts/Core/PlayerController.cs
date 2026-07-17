@@ -16,6 +16,8 @@ namespace GTA3Unity.Core
 #endif
     public class PlayerController : GtaObject
     {
+        public static PlayerController Instance { get; private set; }
+
         [Header("Player")]
         [Tooltip("Move speed of the character in m/s")]
         public float MoveSpeed = 2.0f;
@@ -146,6 +148,10 @@ namespace GTA3Unity.Core
 
         private void Awake()
         {
+            if(Instance == null)
+            {
+                Instance = this;
+            }
             // get a reference to our main camera
             if (_mainCamera == null)
             {
@@ -182,11 +188,21 @@ namespace GTA3Unity.Core
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
 
-            TeleportPlayer(new Vector3(910.777771f,14.95467f,-409.139709f));
+            TogglePlayerControllable(false);
+        }
+
+        public void TogglePlayerControllable(bool isEnabled)
+        {
+            _controller.enabled = isEnabled;
         }
 
         private void Update()
         {
+            if(!GameManager.Instance.InGame)
+            {
+                return;
+            }
+
             // if(!FileLoader.Instance.MapLoaded)
             // {
             //     return;
@@ -199,6 +215,11 @@ namespace GTA3Unity.Core
 
         private void LateUpdate()
         {
+            if(!GameManager.Instance.InGame)
+            {
+                return;
+            }
+
             CameraRotation();
         }
 

@@ -25,6 +25,8 @@ namespace GTA3Unity
         public ImgFile MainImg => m_MainImg;
         public bool MapLoaded => m_MapLoaded;
 
+        public Action OnMapLoaded;
+
         [SerializeField] private NavMeshSurface m_Surface;
 
         [SerializeField]
@@ -44,6 +46,7 @@ namespace GTA3Unity
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
         private IfpFile m_PedIfpFile;
+        private bool m_PreInitIsDone;
         private bool m_IsDone, m_MapLoaded;
         [SerializeField] private bool m_PrintAnims = false;
 
@@ -175,35 +178,86 @@ namespace GTA3Unity
             return true;
         }
 
-        public Texture2D GetFrontendTexture(string textureName)
+        public Texture2D GetFrontendTexture(string textureName, string txdFile)
         {
+            Debug.Assert(m_TxdMaterialCache != null);
+
             // Frontend textures
-            m_TxdMaterialCache.LoadTexture(textureName, textureName, out string _);
-            return m_TxdMaterialCache.Textures[$"{textureName}/{textureName}"];
+            m_TxdMaterialCache.LoadTexture(txdFile, textureName, out string _);
+            return m_TxdMaterialCache.Textures[$"{txdFile}/{textureName}"];
+        }
+
+        public void PreInit()
+        {
+            LoadImages();
+            LoadMaterials();
+            InitTxdCache();
+            RegisterEarlyTxds();
+            m_PreInitIsDone = true;
         }
 
         public void Init()
         {
-            if (m_IsDone == true)
+            StartCoroutine(OnInit());
+        }
+
+        public IEnumerator OnInit()
+        {
+            while(m_PreInitIsDone == false)
             {
-                return;
+                yield return null;
             }
 
-            m_IsDone = true;
+            if (m_IsDone == true)
+            {
+                yield break;
+            }
+
+            m_IsDone = true; // To prevent multiple loading of this class
             Debug.Log("FileLoader.Init begin");
+            // TODO: Load GXT
+            // TODO: Load Audio
+            // TODO: Load Audio
+            // TODO: Load data/surface.dat
+            // TODO: Load Audio
+            // TODO: Load data/pedstats.dat
+            // TODO: Load data/timecyc.dat
+            LoadPedAnimations();
+            MeshSpawn.ClearCache();
+            LoadDataFiles();
+        }
+
+        private void LoadMaterials()
+        {
             m_FallbackMaterial = Resources.Load<Material>("TestMaterial");
+        }
+
+        private void LoadImages()
+        {
+            // This is hardcoded for now as there only ever is the 1 gta3.img file
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
+        }
+
+        private void RegisterEarlyTxds()
+        {
+            m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
+            m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
+            m_TxdMaterialCache.RegisterTxdFile("menu", Path.Combine(GameManager.Instance.GtaDirectory, "models", "menu.txd"));
+        }
+
+        private void InitTxdCache()
+        {
             m_TxdMaterialCache = new TxdMaterialCache();
             m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "txd"));
             m_TxdMaterialCache.SetImageFile(m_MainImg, m_FallbackMaterial);
-            LoadingScreen.Instance.ShowSplashScreen("mainsc1");
-            m_TxdMaterialCache.RegisterLooseTxdDirectory(Path.Combine(GameManager.Instance.GtaDirectory, "models"));
-            m_TxdMaterialCache.RegisterTxdFile("generic", Path.Combine(GameManager.Instance.GtaDirectory, "models", "generic.txd"));
-            LoadPedAnimations();
+        }
+
+        private void LoadDataFiles()
+        {
+            // Load only gta3 and default dat files.
+            // The other dat files are different and need their own processing.
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "default.dat")));
             m_DatFiles.Add(new(Path.Combine(GameManager.Instance.GtaDirectory, "data", "gta3.dat")));
-            MeshSpawn.ClearCache();
-
             foreach (RenderWareIo.DatFile dat in m_DatFiles)
             {
                 foreach (string ide in dat.Dat.Ides)
@@ -215,15 +269,19 @@ namespace GTA3Unity
                     m_Peds.AddRange(ideFile.Ide.Peds);
                 }
             }
-
-            //LoadingScreen.Instance.HideSplashScreen();
-            StartCoroutine(LoadWorldMap());
         }
 
-        public IEnumerator LoadWorldMap()
+        public void LoadWorldMap()
         {
+            StartCoroutine(OnLoadWorldMap());
+        }
+
+        public IEnumerator OnLoadWorldMap()
+        {
+            Debug.Log("Loading world map...");
             if(m_IsDone == false)
             {
+                Debug.LogError($"Failed to load world map: m_IsDone was false");
                 yield break;
             }
 
@@ -237,6 +295,7 @@ namespace GTA3Unity
                 objectsById[obj.Id] = obj;
                 objectsByModelName[obj.ModelName] = obj;
             }
+            int countToLoad = m_Objects.Count;
 
             int instanceCount = 0;
             int spawnedCount = 0;
@@ -288,12 +347,14 @@ namespace GTA3Unity
                             // Occasionally change the loading screen
                             LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
                         }
+                        LoadingScreen.Instance.ShowProgressBar(spawnedCount, countToLoad);
                         yield return null;
                     }
                 }
             }
 
             LoadingScreen.Instance.HideSplashScreen();
+            OnMapLoaded?.Invoke();
 
             loadTimer.Stop();
             Debug.Log(
@@ -307,6 +368,7 @@ namespace GTA3Unity
             loadTimer.Stop();
             Debug.Log($"Created navmesh in {loadTimer.ElapsedMilliseconds} ms.");
             m_MapLoaded = true;
+            GameManager.Instance.SetInGame(true);
         }
 
         private void LoadPedAnimations()

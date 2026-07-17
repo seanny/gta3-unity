@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Unity.VisualScripting;
+using GTA3Unity.UI;
 using UnityEngine;
 using UnityEngine.Video;
 
@@ -11,8 +11,8 @@ namespace GTA3Unity.Core
         Startup,
         Logo,
         Intro,
-        InitialiseOnce,
-        InitialiseFrontend
+        Init,
+        Frontend
     }
 
     public sealed class GameManager: MonoBehaviour
@@ -27,6 +27,14 @@ namespace GTA3Unity.Core
             }
         }
 
+        public bool InGame
+        {
+            get
+            {
+                return m_InGame;
+            }
+        }
+
         [SerializeField]
         private string m_GtaDirectory;
 
@@ -36,7 +44,7 @@ namespace GTA3Unity.Core
 
         [SerializeField] private EGameState m_GameState;
         private bool m_IsInit;
-        private bool m_IntroFailed;
+        private bool m_InGame;
 
         private void Awake()
         {
@@ -52,6 +60,10 @@ namespace GTA3Unity.Core
             {
                 Debug.LogError($"Cannot access \"{m_GtaDirectory}\": Does not exist");
             }
+
+            Debug.Assert(m_VideoPlayer != null);
+
+            Init(m_GtaDirectory);
         }
 
         private void OnVideoEnded(VideoPlayer source)
@@ -79,37 +91,102 @@ namespace GTA3Unity.Core
             switch(m_GameState)
             {
                 case EGameState.Startup:
-                    if(m_IsInit == false)
-                    {
-                        GameManager.Instance.Init(m_GtaDirectory);
-                        m_GameState++;
-                    }
                     break;
                 case EGameState.Logo:
                 case EGameState.Intro:
-                    IntroUpdate();
+                    UpdateVideoInput();
                     break;
-                case EGameState.InitialiseOnce:
-                    FileLoader.Instance.Init();
-                    m_GameState++;
+                case EGameState.Init:
+                    InitUpdate();
+                    break;
+                case EGameState.Frontend:
+                    UpdateFrontend();
                     break;
             }
         }
 
-        private void IntroUpdate()
+        private void UpdateFrontend()
         {
-            if(Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.Space))
+            if (MainMenu.Instance == null)
             {
-                m_GameState++;
-                m_VideoPlayer.Stop();
-                OnVideoEnded(m_VideoPlayer);
+                Debug.LogError($"{nameof(MainMenu)} is no longer available.");
+                return;
             }
+
+            if(MainMenu.Instance.MenuState >= EMainMenuState.StartMenu)
+            {
+                return;
+            }
+            
+            MainMenu.Instance.SetMenuState(EMainMenuState.StartGame);
         }
 
-        public void Init(string gtaRoot)
+        private void InitUpdate()
         {
+            if (FileLoader.Instance == null)
+            {
+                Debug.LogError($"{nameof(FileLoader)} is not available.");
+                return;
+            }
+
+            if (MainMenu.Instance == null)
+            {
+                Debug.LogError($"{nameof(MainMenu)} is not available.");
+                return;
+            }
+
+            try
+            {
+                FileLoader.Instance.PreInit();
+                MainMenu.Instance.SetMenuState(EMainMenuState.Startup);
+                FileLoader.Instance.Init();
+                
+                m_GameState = EGameState.Frontend;
+            }
+            catch(Exception exception)
+            {
+                Debug.LogException(exception, this);
+            }
+
+        }
+
+        private void UpdateVideoInput()
+        {
+            bool skipRequested =
+                Input.GetKeyDown(KeyCode.Return) ||
+                Input.GetKeyDown(KeyCode.Space);
+
+            if (!skipRequested)
+            {
+                return;
+            }
+
+            m_VideoPlayer.Stop();
+            AdvanceVideoSequence();
+        }
+
+        private void Init(string gtaRoot)
+        {
+            if (string.IsNullOrWhiteSpace(gtaRoot))
+            {
+                Debug.LogError("The GTA III installation directory is empty.");
+                return;
+            }
+
+            if (!Directory.Exists(gtaRoot))
+            {
+                Debug.LogError($"Cannot access \"{gtaRoot}\": directory does not exist.");
+                return;
+            }
+
+            if (m_VideoPlayer == null)
+            {
+                Debug.LogError("Cannot start because the VideoPlayer is missing.");
+                return;
+            }
+
             m_IsInit = true;
-            m_GameState = EGameState.Startup;
+            m_GameState = EGameState.Intro;
             m_Logo = Path.Combine(gtaRoot, "movies", "Logo.mpg").Replace(" ", "%20").Replace("\\", "/");
             m_Intro = Path.Combine(gtaRoot, "movies", "GTAtitles.mpg").Replace(" ", "%20").Replace("\\", "/");
 
@@ -119,6 +196,8 @@ namespace GTA3Unity.Core
                 Debug.Assert(m_VideoPlayer != null);
             }
 
+            LoadingScreen.Instance.HideProgressBar();
+
             m_VideoPlayer.url = @"file:///" + m_Logo;
             m_VideoPlayer.loopPointReached += OnVideoEnded;
             m_VideoPlayer.errorReceived += OnPlaybackError;
@@ -127,7 +206,52 @@ namespace GTA3Unity.Core
 
         private void OnPlaybackError(VideoPlayer source, string message)
         {
-            m_GameState = EGameState.InitialiseOnce;
+            Debug.LogWarning($"Video playback failed while in state '{m_GameState}': {message}", this);
+
+            AdvanceVideoSequence();
+        }
+
+        private void AdvanceVideoSequence()
+        {
+            switch (m_GameState)
+            {
+                case EGameState.Logo:
+                    m_GameState = EGameState.Intro;
+                    PlayVideoOrAdvance(m_Intro);
+                    break;
+
+                case EGameState.Intro:
+                    m_GameState = EGameState.Init;
+                    break;
+            }
+        }
+
+        private void PlayVideoOrAdvance(string videoPath)
+        {
+            if (!File.Exists(videoPath))
+            {
+                Debug.LogWarning($"Startup video does not exist: \"{videoPath}\".", this);
+
+                AdvanceVideoSequence();
+                return;
+            }
+
+            try
+            {
+                m_VideoPlayer.Stop();
+                m_VideoPlayer.url = new Uri(videoPath).AbsoluteUri;
+                m_VideoPlayer.Play();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                AdvanceVideoSequence();
+            }
+        }
+
+        public void SetInGame(bool inGame)
+        {
+            m_InGame = inGame;
         }
     }
 }
