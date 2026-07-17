@@ -142,6 +142,7 @@ namespace GTA3Unity.Img
             {
                 Debug.Log($"Loaded {m_EntriesCount} entries at '{FilePath}'.");
             }
+            reader.Dispose();
 
             m_EntriesArray = m_Entries.Values.ToArray();
             m_Loaded = true;

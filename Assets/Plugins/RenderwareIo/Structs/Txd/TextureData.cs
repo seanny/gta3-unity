@@ -131,7 +131,7 @@ namespace RenderWareIo.Structs.Txd
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                Debug.LogWarning(e);
             }
 
             return this;
