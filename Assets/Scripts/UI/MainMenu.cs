@@ -1,7 +1,5 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 using GTA3Unity.Core;
 
 namespace GTA3Unity.UI
@@ -21,7 +19,8 @@ namespace GTA3Unity.UI
         LanguageSetup,
         PlayerSetup,
         Back,
-        QuitGame
+        QuitGame,
+        LoadingScreen
     }
 
     public sealed class MainMenu: MonoBehaviour
@@ -95,10 +94,40 @@ namespace GTA3Unity.UI
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-            LoadingScreen.Instance.ShowSplashScreen("mainsc1");
-            LoadingScreen.Instance.SetSplashText("FED_LDW");
-            FileLoader.Instance.OnMapLoaded += OnNewGameMapLoaded;
-            FileLoader.Instance.LoadWorldMap();
+            LoadingScreen.Instance.HideSplashText();
+            if(GameManager.Instance.IsInit)
+            {
+                GameManager.Instance.SetInGame(true);
+                OnNewGameMapLoaded();
+                LoadingScreen.Instance.HideProgressBar();
+                LoadingScreen.Instance.HideSplashScreen();
+            }
+            else
+            {
+                LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
+                LoadingScreen.Instance.ShowProgressBar(FileLoader.Instance.SpawnedCount, FileLoader.Instance.CountToLoad);
+                SetMenuState(EMainMenuState.LoadingScreen);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if(m_MenuState != EMainMenuState.LoadingScreen)
+            {
+                return;
+            }
+
+            if(FileLoader.Instance.SpawnedCount % 1000 == 0)
+            {
+                // Occasionally change the loading screen
+                LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
+            }
+            LoadingScreen.Instance.ShowProgressBar(FileLoader.Instance.SpawnedCount, FileLoader.Instance.CountToLoad);
+            if(FileLoader.Instance.SpawnedCount >= FileLoader.Instance.CountToLoad)
+            {
+                GameManager.Instance.SetInGame(true);
+                OnNewGameMapLoaded();
+            }
         }
 
         private void OnNewGameMapLoaded()

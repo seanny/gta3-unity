@@ -9,7 +9,6 @@ using Material = UnityEngine.Material;
 using IdeObj = RenderWareIo.Structs.Ide.Obj;
 using ImgFile = GTA3Unity.Img.ImgFile;
 using GTA3Unity.Core;
-using Unity.Burst.Intrinsics;
 using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
@@ -22,8 +21,11 @@ namespace GTA3Unity
         public static FileLoader Instance { get; private set; }
 
         public bool IsDone => m_IsDone;
+        public bool IsActuallyInit => m_IsActuallyInit;
         public ImgFile MainImg => m_MainImg;
         public bool MapLoaded => m_MapLoaded;
+        public int SpawnedCount => m_SpawnedCount;
+        public int CountToLoad => m_CountToLoad;
 
         public Action OnMapLoaded;
 
@@ -39,6 +41,7 @@ namespace GTA3Unity
         private List<RenderWareIo.Structs.Ide.Car> m_Cars = new();
         [SerializeField]
         private List<RenderWareIo.Structs.Ide.Ped> m_Peds = new();
+        [SerializeField] private List<IplFile> m_IplFiles = new();
 
         private Dictionary<int, GameObject> m_LoadedModels = new();
 
@@ -48,7 +51,10 @@ namespace GTA3Unity
         private IfpFile m_PedIfpFile;
         private bool m_PreInitIsDone;
         private bool m_IsDone, m_MapLoaded;
+        private bool m_IsActuallyInit;
         [SerializeField] private bool m_PrintAnims = false;
+        private int m_SpawnedCount;
+        private int m_CountToLoad;
 
         void Awake()
         {
@@ -225,6 +231,7 @@ namespace GTA3Unity
             LoadPedAnimations();
             MeshSpawn.ClearCache();
             LoadDataFiles();
+            m_IsActuallyInit = true;
         }
 
         private void LoadMaterials()
@@ -268,6 +275,13 @@ namespace GTA3Unity
                     m_TxdMaterialCache.RegisterTxdParents(ideFile.Ide.Txdps);
                     m_Peds.AddRange(ideFile.Ide.Peds);
                 }
+                foreach (string ipl in dat.Dat.Ipls)
+                {
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+                    IplFile iplFile = new(path);
+                    m_IplFiles.Add(iplFile);
+                    m_CountToLoad += iplFile.Ipl.Insts.Count;
+                }
             }
         }
 
@@ -295,19 +309,33 @@ namespace GTA3Unity
                 objectsById[obj.Id] = obj;
                 objectsByModelName[obj.ModelName] = obj;
             }
-            int countToLoad = m_Objects.Count;
+
+            // List<IplFile> iplFiles = new();
+            // foreach (RenderWareIo.DatFile dat in m_DatFiles)
+            // {
+            //     foreach (string ipl in dat.Dat.Ipls)
+            //     {
+            //         string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+            //         IplFile iplFile = new(path);
+            //         iplFiles.Add(iplFile);
+            //         m_CountToLoad += iplFile.Ipl.Insts.Count;
+            //     }
+            // }
 
             int instanceCount = 0;
-            int spawnedCount = 0;
             int missingDefinitionCount = 0;
-            System.Diagnostics.Stopwatch loadTimer = System.Diagnostics.Stopwatch.StartNew();
 
-            foreach (RenderWareIo.DatFile dat in m_DatFiles)
+            //foreach (RenderWareIo.DatFile dat in m_DatFiles)
             {
-                foreach (string ipl in dat.Dat.Ipls)
+                foreach (var iplFile in m_IplFiles)
                 {
-                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
-                    IplFile iplFile = new(path);
+                    System.Diagnostics.Stopwatch loadTimer = System.Diagnostics.Stopwatch.StartNew();
+                    // string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
+                    // IplFile iplFile = new(path);
+                    // if(m_CountToLoad < m_CountToLoad + iplFile.Ipl.Insts.Count)
+                    // {
+                    //     m_CountToLoad = m_CountToLoad + iplFile.Ipl.Insts.Count;
+                    // }
                     foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
                         if(inst.ModelName.Contains("LOD", StringComparison.InvariantCultureIgnoreCase))
@@ -332,6 +360,7 @@ namespace GTA3Unity
                             inst.Rotation.Z,
                             inst.Rotation.W);
 
+                        System.Diagnostics.Stopwatch datTimer = System.Diagnostics.Stopwatch.StartNew();
                         if (MeshSpawn.SpawnMesh(
                                 meshObj,
                                 position,
@@ -340,35 +369,29 @@ namespace GTA3Unity
                                 m_FallbackMaterial,
                                 m_TxdMaterialCache))
                         {
-                            spawnedCount++;
+                            m_SpawnedCount++;
                         }
-                        if(spawnedCount % 1000 == 0)
-                        {
-                            // Occasionally change the loading screen
-                            LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
-                        }
-                        LoadingScreen.Instance.ShowProgressBar(spawnedCount, countToLoad);
+                        datTimer.Stop();
+                        Debug.Log($"Loaded {inst.ModelName} in {datTimer.ElapsedMilliseconds} ms");
+                        // if(spawnedCount % 1000 == 0)
+                        // {
+                        //     // Occasionally change the loading screen
+                        //     LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
+                        // }
+                        // LoadingScreen.Instance.ShowProgressBar(spawnedCount, countToLoad);
                         yield return null;
                     }
+                    loadTimer.Stop();
+                    Debug.Log($"Load Timer={loadTimer.ElapsedMilliseconds}");
                 }
             }
 
             LoadingScreen.Instance.HideSplashScreen();
             OnMapLoaded?.Invoke();
 
-            loadTimer.Stop();
-            Debug.Log(
-                $"Loaded {spawnedCount}/{instanceCount} IPL instances in {loadTimer.ElapsedMilliseconds} ms. " +
-                $"IDE objects={m_Objects.Count}, missing definitions={missingDefinitionCount}.");
             MeshSpawn.LogStats();
             m_TxdMaterialCache.LogStats();
-
-            loadTimer = System.Diagnostics.Stopwatch.StartNew();
-            m_Surface.BuildNavMesh();
-            loadTimer.Stop();
-            Debug.Log($"Created navmesh in {loadTimer.ElapsedMilliseconds} ms.");
             m_MapLoaded = true;
-            GameManager.Instance.SetInGame(true);
         }
 
         private void LoadPedAnimations()

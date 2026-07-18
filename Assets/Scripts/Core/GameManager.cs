@@ -35,6 +35,14 @@ namespace GTA3Unity.Core
             }
         }
 
+        public bool IsInit
+        {
+            get
+            {
+                return m_IsInit;
+            }
+        }
+
         [SerializeField]
         private string m_GtaDirectory;
 
@@ -141,6 +149,8 @@ namespace GTA3Unity.Core
                 FileLoader.Instance.PreInit();
                 MainMenu.Instance.SetMenuState(EMainMenuState.Startup);
                 FileLoader.Instance.Init();
+                FileLoader.Instance.LoadWorldMap();
+                FileLoader.Instance.OnMapLoaded += OnMapLoaded;
                 
                 m_GameState = EGameState.Frontend;
             }
@@ -149,6 +159,11 @@ namespace GTA3Unity.Core
                 Debug.LogException(exception, this);
             }
 
+        }
+
+        private void OnMapLoaded()
+        {
+            m_IsInit = true;
         }
 
         private void UpdateVideoInput()
@@ -186,7 +201,6 @@ namespace GTA3Unity.Core
                 return;
             }
 
-            m_IsInit = true;
             m_GameState = EGameState.Intro;
             m_Logo = Path.Combine(gtaRoot, "movies", "Logo.mpg").Replace(" ", "%20").Replace("\\", "/");
             m_Intro = Path.Combine(gtaRoot, "movies", "GTAtitles.mpg").Replace(" ", "%20").Replace("\\", "/");
