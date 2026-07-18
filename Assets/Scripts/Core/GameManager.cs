@@ -54,8 +54,9 @@ namespace GTA3Unity.Core
             }
         }
 
-        private void Start()
+        public void StartGta(string gtaRoot)
         {
+            m_GtaDirectory = gtaRoot;
             if(!Directory.Exists(m_GtaDirectory))
             {
                 Debug.LogError($"Cannot access \"{m_GtaDirectory}\": Does not exist");
