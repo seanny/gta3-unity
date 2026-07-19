@@ -10,6 +10,7 @@ namespace RenderWareIo
     public class IplFile
     {
         public Ipl Ipl { get; set; }
+        public string IplName { get; private set; }
 
 
         public IplFile()
@@ -24,6 +25,7 @@ namespace RenderWareIo
                 throw new FileNotFoundException($"Ipl file '{path}' does not exist");
             }
 
+            IplName = Path.GetFileNameWithoutExtension(path);
             string data = File.ReadAllText(path);
 
             this.Ipl = Ipl.Read(data);

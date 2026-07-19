@@ -16,7 +16,7 @@ namespace GTA3Unity
         private static int s_TemplateMisses;
         private static int s_SpawnFailures;
 
-        public static bool SpawnMesh(
+        public static GameObject SpawnMesh(
             RenderWareIo.Structs.Ide.Obj meshObj,
             Vector3 position,
             Quaternion rotation,
@@ -30,7 +30,7 @@ namespace GTA3Unity
             {
                 Debug.LogWarning($"Could not find DFF '{meshObj.ModelName}'.");
                 s_SpawnFailures++;
-                return false;
+                return null;
             }
 
             try
@@ -45,7 +45,7 @@ namespace GTA3Unity
                 if (template == null)
                 {
                     s_SpawnFailures++;
-                    return false;
+                    return null;
                 }
 
                 GameObject instance = UnityEngine.Object.Instantiate(template);
@@ -53,13 +53,13 @@ namespace GTA3Unity
                 instance.transform.SetPositionAndRotation(position, rotation);
                 instance.transform.localScale = Vector3.one;
                 instance.SetActive(true);
-                return true;
+                return instance;
             }
             catch (Exception exception)
             {
                 Debug.LogWarning($"Failed to spawn DFF '{meshObj.ModelName}': {exception.Message}");
                 s_SpawnFailures++;
-                return false;
+                return null;
             }
         }
 

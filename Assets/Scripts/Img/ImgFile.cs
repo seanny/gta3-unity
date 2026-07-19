@@ -75,11 +75,13 @@ namespace GTA3Unity.Img
         public ImgFile(string path)
             : this(new FileEntry(path))
         {
+            
         }
 
         public ImgFile(FileEntry file)
         {
             ArchiveFile = file;
+            LoadEntries();
         }
 
         public bool Contains(string fileName)
@@ -94,6 +96,7 @@ namespace GTA3Unity.Img
 
         private void LoadEntries()
         {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
             string dirPath = Path.ChangeExtension(ArchiveFile.FilePath, "dir");
 
             if (!File.Exists(dirPath))
@@ -143,6 +146,8 @@ namespace GTA3Unity.Img
                 Debug.Log($"Loaded {m_EntriesCount} entries at '{FilePath}'.");
             }
             reader.Dispose();
+            timer.Stop();
+            Debug.Log($"Loaded {FilePath} in {timer.Elapsed.Milliseconds} ms");
 
             m_EntriesArray = m_Entries.Values.ToArray();
             m_Loaded = true;

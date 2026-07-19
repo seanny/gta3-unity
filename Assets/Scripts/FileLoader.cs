@@ -44,6 +44,7 @@ namespace GTA3Unity
         [SerializeField] private List<IplFile> m_IplFiles = new();
 
         private Dictionary<int, GameObject> m_LoadedModels = new();
+        private List<GameObject> m_IplRootObjects = new();
 
         private ImgFile m_MainImg;
         private Material m_FallbackMaterial;
@@ -280,6 +281,7 @@ namespace GTA3Unity
                     string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
                     IplFile iplFile = new(path);
                     m_IplFiles.Add(iplFile);
+                    m_IplRootObjects.Add(new GameObject(iplFile.IplName));
                     m_CountToLoad += iplFile.Ipl.Insts.Count;
                 }
             }
@@ -329,13 +331,17 @@ namespace GTA3Unity
             {
                 foreach (var iplFile in m_IplFiles)
                 {
+                    GameObject iplRoot = null;
+                    foreach(var iplObject in m_IplRootObjects)
+                    {
+                        if(iplObject.name == iplFile.IplName)
+                        {
+                            iplRoot = iplObject;
+                            break;
+                        }
+                    }
+
                     System.Diagnostics.Stopwatch loadTimer = System.Diagnostics.Stopwatch.StartNew();
-                    // string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
-                    // IplFile iplFile = new(path);
-                    // if(m_CountToLoad < m_CountToLoad + iplFile.Ipl.Insts.Count)
-                    // {
-                    //     m_CountToLoad = m_CountToLoad + iplFile.Ipl.Insts.Count;
-                    // }
                     foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
                         if(inst.ModelName.Contains("LOD", StringComparison.InvariantCultureIgnoreCase))
@@ -361,24 +367,15 @@ namespace GTA3Unity
                             inst.Rotation.W);
 
                         System.Diagnostics.Stopwatch datTimer = System.Diagnostics.Stopwatch.StartNew();
-                        if (MeshSpawn.SpawnMesh(
-                                meshObj,
-                                position,
-                                rotation,
-                                m_MainImg,
-                                m_FallbackMaterial,
-                                m_TxdMaterialCache))
+                        var gameObject = MeshSpawn.SpawnMesh(meshObj, position, rotation, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
+                        if (gameObject == null)
                         {
-                            m_SpawnedCount++;
+                            Debug.LogWarning($"Could not spawn {meshObj.ModelName}");
                         }
+                        gameObject.transform.SetParent(iplRoot.transform);
+                        m_SpawnedCount++;
                         datTimer.Stop();
-                        Debug.Log($"Loaded {inst.ModelName} in {datTimer.ElapsedMilliseconds} ms");
-                        // if(spawnedCount % 1000 == 0)
-                        // {
-                        //     // Occasionally change the loading screen
-                        //     LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
-                        // }
-                        // LoadingScreen.Instance.ShowProgressBar(spawnedCount, countToLoad);
+                        Debug.Log($"Loaded {inst.ModelName} in {datTimer.ElapsedMilliseconds} ms")   ;
                         yield return null;
                     }
                     loadTimer.Stop();
