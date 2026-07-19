@@ -9,27 +9,7 @@ namespace GTA3Unity.Core
 
         protected GameObject m_PedModel;
 
-        public bool PlayAnimation(
-            string animName,
-            float fadeLength = 0.15f,
-            WrapMode wrapMode = WrapMode.Loop,
-            bool makeInPlace = false)
-        {
-            if(m_PedModel == null)
-            {
-                Debug.LogError($"Ped {name} does not have a PedModel attached.");
-                return false;
-            }
-
-            return FileLoader.Instance.PlayPedAnimation(
-                m_PedModel,
-                animName,
-                fadeLength,
-                wrapMode,
-                makeInPlace);
-        }
-
-        public void SetModel(int modelIndex)
+        public virtual void SetModel(int modelIndex)
         {
             if(FileLoader.Instance == null || !FileLoader.Instance.IsDone)
             {
@@ -45,7 +25,7 @@ namespace GTA3Unity.Core
 
             if (template == null)
             {
-                Debug.LogWarning($"Could not load ped model {modelIndex}.");
+                Debug.LogWarning($"Could not load model {modelIndex}.");
                 return;
             }
 
@@ -56,7 +36,6 @@ namespace GTA3Unity.Core
             m_PedModel.transform.localRotation = s_ModelBasisRotation;
             m_PedModel.transform.localScale = Vector3.one;
             m_PedModel.SetActive(true);
-            FileLoader.Instance.PlayPedAnimation(m_PedModel);
         }
     }
 }

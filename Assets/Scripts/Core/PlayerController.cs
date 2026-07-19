@@ -4,6 +4,9 @@ using UnityEngine.InputSystem;
 #endif
 using StarterAssets;
 using System.Collections;
+using GTA3Unity.Vehicles;
+using System;
+using Unity.VisualScripting;
 
 /* Note: animations are called via the controller for both the character and capsule using animator null checks
  */
@@ -14,7 +17,7 @@ namespace GTA3Unity.Core
 #if ENABLE_INPUT_SYSTEM 
     [RequireComponent(typeof(PlayerInput))]
 #endif
-    public class PlayerController : GtaObject
+    public class PlayerController : PedObject
     {
         public static PlayerController Instance { get; private set; }
 
@@ -114,6 +117,8 @@ namespace GTA3Unity.Core
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
 
+        private Vehicle m_Vehicle;
+
         private const float _threshold = 0.01f;
         private const float AnimationFadeLength = 0.15f;
         private const string IdleAnimation = "idle_stance";
@@ -132,6 +137,15 @@ namespace GTA3Unity.Core
 				return false;
 #endif
             }
+        }
+
+        public void PutInCar(Vehicle vehicle)
+        {
+            m_Vehicle = vehicle;
+            SetPedState(EPedState.Driving);
+            PlayAnimation("CAR_sit");
+            TeleportPlayer(vehicle.transform.position);
+            vehicle.SetDriver(this);
         }
 
         public void TeleportPlayer(Vector3 position, Quaternion? rotation = null)
@@ -168,6 +182,7 @@ namespace GTA3Unity.Core
 
             SetModel(1);
             Debug.Assert(m_PedModel != null);
+            FileLoader.Instance.PlayPedAnimation(m_PedModel);
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
 
             _controller = GetComponent<CharacterController>();
@@ -203,14 +218,52 @@ namespace GTA3Unity.Core
                 return;
             }
 
-            // if(!FileLoader.Instance.MapLoaded)
-            // {
-            //     return;
-            // }
+            switch(m_PedState)
+            {
+                case EPedState.OnFoot:
+                    FindVehicles();
+                    JumpAndGravity();
+                    GroundedCheck();
+                    Move();
+                    break;
+                case EPedState.Driving:
+                    if(m_Vehicle == null)
+                    {
+                        return;
+                    }
+                    m_Vehicle.OnInput(_input);
+                    break;
+                case EPedState.Passenger:
+                    break;
+            }
 
-            JumpAndGravity();
-            GroundedCheck();
-            Move();
+        }
+
+        private void FindVehicles()
+        {
+            if(Input.GetKeyUp(KeyCode.F))
+            {
+                Vehicle[] vehs = GameObject.FindObjectsByType<Vehicle>();
+                if(vehs.Length < 1)
+                {
+                    return;
+                }
+                float nearestDistance = 20f;
+                Vehicle nearestVehicle = null;
+                foreach(var vehicle in vehs)
+                {
+                    float distance = Vector3.Distance(transform.position, vehicle.transform.position);
+                    if(distance < nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestVehicle = vehicle;
+                    }
+                }
+                if(nearestVehicle != null)
+                {
+                    PutInCar(nearestVehicle);
+                }
+            }
         }
 
         private void LateUpdate()

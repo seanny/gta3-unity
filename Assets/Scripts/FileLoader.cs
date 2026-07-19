@@ -292,6 +292,11 @@ namespace GTA3Unity
             StartCoroutine(OnLoadWorldMap());
         }
 
+        public void StopWorldLoading()
+        {
+            StopAllCoroutines();
+        }
+
         public IEnumerator OnLoadWorldMap()
         {
             Debug.Log("Loading world map...");
