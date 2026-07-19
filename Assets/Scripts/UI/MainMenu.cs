@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using GTA3Unity.Core;
+using System.Collections;
 
 namespace GTA3Unity.UI
 {
@@ -97,17 +98,22 @@ namespace GTA3Unity.UI
             LoadingScreen.Instance.HideSplashText();
             if(GameManager.Instance.IsInit)
             {
-                GameManager.Instance.SetInGame(true);
-                OnNewGameMapLoaded();
-                LoadingScreen.Instance.HideProgressBar();
-                LoadingScreen.Instance.HideSplashScreen();
+                OnMapLoaded();
             }
             else
             {
                 LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
                 LoadingScreen.Instance.ShowProgressBar(FileLoader.Instance.SpawnedCount, FileLoader.Instance.CountToLoad);
                 SetMenuState(EMainMenuState.LoadingScreen);
+                FileLoader.Instance.OnMapLoaded += OnMapLoaded;
             }
+        }
+
+        private void OnMapLoaded()
+        {
+            GameManager.Instance.SetInGame(true);
+            LoadingScreen.Instance.HideProgressBar();
+            LoadingScreen.Instance.HideSplashScreen();
         }
 
         private void LateUpdate()
@@ -123,17 +129,6 @@ namespace GTA3Unity.UI
                 LoadingScreen.Instance.ShowSplashScreen(LoadingScreen.Instance.GetRandomSplashScreen());
             }
             LoadingScreen.Instance.ShowProgressBar(FileLoader.Instance.SpawnedCount, FileLoader.Instance.CountToLoad);
-            if(FileLoader.Instance.SpawnedCount >= FileLoader.Instance.CountToLoad)
-            {
-                GameManager.Instance.SetInGame(true);
-                OnNewGameMapLoaded();
-            }
-        }
-
-        private void OnNewGameMapLoaded()
-        {
-            PlayerController.Instance.TogglePlayerControllable(true);
-            PlayerController.Instance.TeleportPlayer(new Vector3(910.777771f,14.95467f,-409.139709f));
         }
 
         public void OnClickOptionsButton()

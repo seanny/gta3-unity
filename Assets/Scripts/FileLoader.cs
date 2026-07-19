@@ -312,18 +312,6 @@ namespace GTA3Unity
                 objectsByModelName[obj.ModelName] = obj;
             }
 
-            // List<IplFile> iplFiles = new();
-            // foreach (RenderWareIo.DatFile dat in m_DatFiles)
-            // {
-            //     foreach (string ipl in dat.Dat.Ipls)
-            //     {
-            //         string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ipl));
-            //         IplFile iplFile = new(path);
-            //         iplFiles.Add(iplFile);
-            //         m_CountToLoad += iplFile.Ipl.Insts.Count;
-            //     }
-            // }
-
             int instanceCount = 0;
             int missingDefinitionCount = 0;
 
@@ -341,7 +329,6 @@ namespace GTA3Unity
                         }
                     }
 
-                    System.Diagnostics.Stopwatch loadTimer = System.Diagnostics.Stopwatch.StartNew();
                     foreach (RenderWareIo.Structs.Ipl.Inst inst in iplFile.Ipl.Insts)
                     {
                         if(inst.ModelName.Contains("LOD", StringComparison.InvariantCultureIgnoreCase))
@@ -366,24 +353,22 @@ namespace GTA3Unity
                             inst.Rotation.Z,
                             inst.Rotation.W);
 
-                        System.Diagnostics.Stopwatch datTimer = System.Diagnostics.Stopwatch.StartNew();
                         var gameObject = MeshSpawn.SpawnMesh(meshObj, position, rotation, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
                         if (gameObject == null)
                         {
                             Debug.LogWarning($"Could not spawn {meshObj.ModelName}");
+                            continue;
                         }
                         gameObject.transform.SetParent(iplRoot.transform);
                         m_SpawnedCount++;
-                        datTimer.Stop();
-                        Debug.Log($"Loaded {inst.ModelName} in {datTimer.ElapsedMilliseconds} ms")   ;
-                        yield return null;
+                        if(m_SpawnedCount % 32 == 0)
+                        {
+                            // yield return to prevent the editor/player from freezing
+                            yield return null;
+                        }
                     }
-                    loadTimer.Stop();
-                    Debug.Log($"Load Timer={loadTimer.ElapsedMilliseconds}");
                 }
             }
-
-            LoadingScreen.Instance.HideSplashScreen();
             OnMapLoaded?.Invoke();
 
             MeshSpawn.LogStats();

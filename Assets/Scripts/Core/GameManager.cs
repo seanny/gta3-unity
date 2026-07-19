@@ -43,6 +43,8 @@ namespace GTA3Unity.Core
             }
         }
 
+        public bool IsInGame => m_InGame;
+
         [SerializeField]
         private string m_GtaDirectory;
 
@@ -51,8 +53,8 @@ namespace GTA3Unity.Core
         [SerializeField] private string m_Intro;
 
         [SerializeField] private EGameState m_GameState;
-        private bool m_IsInit;
-        private bool m_InGame;
+        [SerializeField] private bool m_IsInit;
+        [SerializeField] private bool m_InGame;
 
         private void Awake()
         {
@@ -267,6 +269,8 @@ namespace GTA3Unity.Core
         public void SetInGame(bool inGame)
         {
             m_InGame = inGame;
+            PlayerController.Instance.TogglePlayerControllable(true);
+            PlayerController.Instance.TeleportPlayer(new Vector3(910.777771f, 14.95467f, -409.139709f));
         }
     }
 }

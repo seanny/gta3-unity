@@ -26,7 +26,6 @@ namespace RenderWareIo.Structs.Dff
 
         public Dff Read(Stream stream)
         {
-            var timer = System.Diagnostics.Stopwatch.StartNew();
             this.Header = new ChunkHeader().Read(stream);
             while (this.Header.Type != 0x10)
             {
@@ -34,8 +33,6 @@ namespace RenderWareIo.Structs.Dff
                 this.Header = new ChunkHeader().Read(stream);
             }
             this.Clump = new Clump().Read(stream);
-            timer.Stop();
-            Debug.Log($"Loaded dff file in {timer.ElapsedMilliseconds} ms");
             return this;
         }
 

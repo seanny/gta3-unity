@@ -2892,6 +2892,8 @@ MonoBehaviour:
   m_Logo: 
   m_Intro: 
   m_GameState: 0
+  m_IsInit: 0
+  m_InGame: 0
 --- !u!4 &1131704187
 Transform:
   m_ObjectHideFlags: 0
