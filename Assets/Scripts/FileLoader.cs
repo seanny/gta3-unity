@@ -260,7 +260,7 @@ namespace GTA3Unity
         {
             foreach(var looseDff in Directory.GetFiles(path))
             {
-                if(Path.GetExtension(looseDff).Equals(".dff", StringComparison.InvariantCultureIgnoreCase))
+                if(!Path.GetExtension(looseDff).Equals(".dff", StringComparison.InvariantCultureIgnoreCase))
                 {
                     continue;
                 }
