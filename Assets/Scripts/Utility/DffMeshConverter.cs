@@ -346,11 +346,14 @@ namespace GTA3Unity.Utility
                 meshRenderer.sharedMaterials = materials;
 
                 // Temporary measure until I implement GTA collisions
-                MeshCollider meshCollider =
-                    geometryObject.AddComponent<MeshCollider>();
+                if(!modelName.Contains("wheel", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    MeshCollider meshCollider =
+                        geometryObject.AddComponent<MeshCollider>();
 
-                meshCollider.sharedMesh = mesh;
-                meshCollider.convex = false;
+                    meshCollider.sharedMesh = mesh;
+                    meshCollider.convex = false;                    
+                }
 
                 geometryObject.SetActive(true);
             }
