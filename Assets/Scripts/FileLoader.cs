@@ -43,6 +43,7 @@ namespace GTA3Unity
         [SerializeField]
         private List<RenderWareIo.Structs.Ide.Ped> m_Peds = new();
         [SerializeField] private List<IplFile> m_IplFiles = new();
+        [SerializeField] private List<DffFile> m_DffFiles = new();
 
         private Dictionary<int, GameObject> m_LoadedModels = new();
         private List<GameObject> m_IplRootObjects = new();
@@ -254,22 +255,6 @@ namespace GTA3Unity
         {
             // This is hardcoded for now as there only ever is the 1 gta3.img file
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
-            LoadLooseDffFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "Generic"));
-        }
-
-        private void LoadLooseDffFile(string path)
-        {
-            foreach(var looseDff in Directory.GetFiles(path))
-            {
-                if(!Path.GetExtension(looseDff).Equals(".dff", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    continue;
-                }
-                string fileName = Path.GetFileName(looseDff);
-                DffFile dffFile = new DffFile(looseDff);
-                m_LooseDff.Add(fileName, dffFile);
-                Debug.Log($"Added loose DFF \"{fileName}\" located at {looseDff}");
-            }
         }
 
         private void RegisterEarlyTxds()
@@ -309,6 +294,12 @@ namespace GTA3Unity
                     m_IplFiles.Add(iplFile);
                     m_IplRootObjects.Add(new GameObject(iplFile.IplName));
                     m_CountToLoad += iplFile.Ipl.Insts.Count;
+                }
+                foreach (string modelFile in dat.Dat.ModelFiles)
+                {
+                    string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(modelFile));
+                    DffFile dffFile = new(path);
+                    m_LooseDff.Add(Path.GetFileName(path),dffFile);
                 }
             }
         }
