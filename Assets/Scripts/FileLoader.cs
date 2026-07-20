@@ -28,6 +28,30 @@ namespace GTA3Unity
         public int CountToLoad => m_CountToLoad;
         public IReadOnlyDictionary<string, DffFile> LooseDffFiles => m_LooseDff;
 
+        public bool TryGetLooseDff(string dffName, out DffFile dffFile)
+        {
+            if (m_LooseDff.TryGetValue(dffName, out dffFile))
+            {
+                return true;
+            }
+
+            HashSet<DffFile> checkedFiles = new();
+            foreach (DffFile looseDff in m_LooseDff.Values)
+            {
+                if (looseDff == null || !checkedFiles.Add(looseDff) ||
+                    !looseDff.TryGetEmbeddedDff(dffName, out dffFile))
+                {
+                    continue;
+                }
+
+                m_LooseDff[dffName] = dffFile;
+                return true;
+            }
+
+            dffFile = null;
+            return false;
+        }
+
         public Action OnMapLoaded;
 
         [SerializeField] private NavMeshSurface m_Surface;

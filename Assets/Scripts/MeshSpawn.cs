@@ -27,7 +27,7 @@ namespace GTA3Unity
             string dffName = $"{meshObj.ModelName}.dff";
 
             if (!imgFileToReadFrom.Contains(dffName) &&
-                !FileLoader.Instance.LooseDffFiles.ContainsKey(dffName))
+                !FileLoader.Instance.TryGetLooseDff(dffName, out _))
             {
                 Debug.LogWarning($"Could not find DFF '{meshObj.ModelName}'.");
                 s_SpawnFailures++;
@@ -115,7 +115,7 @@ namespace GTA3Unity
 
             DffFile dffFile = null;
 
-            if (!FileLoader.Instance.LooseDffFiles.TryGetValue(dffName, out dffFile))
+            if (!FileLoader.Instance.TryGetLooseDff(dffName, out dffFile))
             {
                 if (!imgFileToReadFrom.Contains(dffName))
                 {
