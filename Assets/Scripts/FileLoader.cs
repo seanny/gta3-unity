@@ -26,6 +26,7 @@ namespace GTA3Unity
         public bool MapLoaded => m_MapLoaded;
         public int SpawnedCount => m_SpawnedCount;
         public int CountToLoad => m_CountToLoad;
+        public IReadOnlyDictionary<string, DffFile> LooseDffFiles => m_LooseDff;
 
         public Action OnMapLoaded;
 
@@ -47,6 +48,7 @@ namespace GTA3Unity
         private List<GameObject> m_IplRootObjects = new();
 
         private ImgFile m_MainImg;
+        private Dictionary<string, DffFile> m_LooseDff = new();
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
         private IfpFile m_PedIfpFile;
@@ -251,6 +253,22 @@ namespace GTA3Unity
         {
             // This is hardcoded for now as there only ever is the 1 gta3.img file
             m_MainImg = new ImgFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "gta3.img"));
+            LoadLooseDffFile(Path.Combine(GameManager.Instance.GtaDirectory, "models", "Generic"));
+        }
+
+        private void LoadLooseDffFile(string path)
+        {
+            foreach(var looseDff in Directory.GetFiles(path))
+            {
+                if(Path.GetExtension(looseDff).Equals(".dff", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    continue;
+                }
+                string fileName = Path.GetFileName(looseDff);
+                DffFile dffFile = new DffFile(looseDff);
+                m_LooseDff.Add(fileName, dffFile);
+                Debug.Log($"Added loose DFF \"{fileName}\" located at {looseDff}");
+            }
         }
 
         private void RegisterEarlyTxds()

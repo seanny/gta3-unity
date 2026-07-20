@@ -119,8 +119,16 @@ namespace GTA3Unity
                 return null;
             }
 
+            DffFile dffFile = null;
+
+            // Loose dff files usually have embedded dff files
+            foreach(var looseDff in FileLoader.Instance.LooseDffFiles)
+            {
+                // TODO: Look for embedded .dff files and load them
+            }
+
             GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
-            DffFile dffFile = new DffFile(entry.GetData());
+            dffFile = new DffFile(entry.GetData());
 
             bool isPedDefinition =
                 meshObj is RenderWareIo.Structs.Ide.Ped;
