@@ -80,6 +80,13 @@ namespace GTA3Unity
                     return MeshSpawn.GetOrCreateTemplate<Ped>(modelIndex, ideObject, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
                 }
             }
+            foreach(var ideObject in m_Objects)
+            {
+                if(ideObject.Id == modelIndex)
+                {
+                    return MeshSpawn.GetOrCreateTemplate<Obj>(modelIndex, ideObject, m_MainImg, m_FallbackMaterial, m_TxdMaterialCache);
+                }
+            }
             return null;
         }
 

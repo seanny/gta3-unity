@@ -21,21 +21,27 @@ namespace GTA3Unity.Core
                 Destroy(m_PedModel);
             }
 
+            m_PedModel = InstantiateModel(modelIndex);
+        }
+
+        protected GameObject InstantiateModel(int modelIndex)
+        {
             GameObject template = FileLoader.Instance.GetModel(modelIndex);
 
             if (template == null)
             {
                 Debug.LogWarning($"Could not load model {modelIndex}.");
-                return;
+                return null;
             }
 
-            m_PedModel = GameObject.Instantiate<GameObject>(template);
-            m_PedModel.name = template.name.Replace("_Template", string.Empty);
-            m_PedModel.transform.SetParent(transform, worldPositionStays: false);
-            m_PedModel.transform.localPosition = s_ModelBasisPosition;
-            m_PedModel.transform.localRotation = s_ModelBasisRotation;
-            m_PedModel.transform.localScale = Vector3.one;
-            m_PedModel.SetActive(true);
+            var spawnedModel = GameObject.Instantiate<GameObject>(template);
+            spawnedModel.name = template.name.Replace("_Template", string.Empty);
+            spawnedModel.transform.SetParent(transform, worldPositionStays: false);
+            spawnedModel.transform.localPosition = s_ModelBasisPosition;
+            spawnedModel.transform.localRotation = s_ModelBasisRotation;
+            spawnedModel.transform.localScale = Vector3.one;
+            spawnedModel.SetActive(true);
+            return spawnedModel;
         }
     }
 }
