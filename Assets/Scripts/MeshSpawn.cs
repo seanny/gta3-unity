@@ -26,7 +26,8 @@ namespace GTA3Unity
         {
             string dffName = $"{meshObj.ModelName}.dff";
 
-            if (!imgFileToReadFrom.Contains(dffName))
+            if (!imgFileToReadFrom.Contains(dffName) &&
+                !FileLoader.Instance.LooseDffFiles.ContainsKey(dffName))
             {
                 Debug.LogWarning($"Could not find DFF '{meshObj.ModelName}'.");
                 s_SpawnFailures++;
@@ -112,23 +113,20 @@ namespace GTA3Unity
 
             string dffName = $"{meshObj.ModelName}.dff";
 
-            if (!imgFileToReadFrom.Contains(dffName))
-            {
-                Debug.LogWarning($"Could not find DFF '{dffName}'.");
-                s_SpawnFailures++;
-                return null;
-            }
-
             DffFile dffFile = null;
 
-            // Loose dff files usually have embedded dff files
-            foreach(var looseDff in FileLoader.Instance.LooseDffFiles)
+            if (!FileLoader.Instance.LooseDffFiles.TryGetValue(dffName, out dffFile))
             {
-                // TODO: Look for embedded .dff files and load them
-            }
+                if (!imgFileToReadFrom.Contains(dffName))
+                {
+                    Debug.LogWarning($"Could not find DFF '{dffName}'.");
+                    s_SpawnFailures++;
+                    return null;
+                }
 
-            GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
-            dffFile = new DffFile(entry.GetData());
+                GTA3Unity.Img.FileEntry entry = imgFileToReadFrom[dffName];
+                dffFile = new DffFile(entry.GetData());
+            }
 
             bool isPedDefinition =
                 meshObj is RenderWareIo.Structs.Ide.Ped;

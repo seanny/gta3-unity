@@ -48,7 +48,8 @@ namespace GTA3Unity
         private List<GameObject> m_IplRootObjects = new();
 
         private ImgFile m_MainImg;
-        private Dictionary<string, DffFile> m_LooseDff = new();
+        private Dictionary<string, DffFile> m_LooseDff =
+            new(StringComparer.OrdinalIgnoreCase);
         private Material m_FallbackMaterial;
         private TxdMaterialCache m_TxdMaterialCache;
         private IfpFile m_PedIfpFile;
