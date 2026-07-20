@@ -69,7 +69,6 @@ namespace RenderWareIo
 
             if (rootFrameIndex < 0)
             {
-                Debug.LogWarning($"Failed Loading embedded model {targetName}: rootFrameIndex < 0");
                 return false;
             }
 
@@ -112,7 +111,6 @@ namespace RenderWareIo
 
             if (sourceGeometryIndices.Count == 0)
             {
-                Debug.LogWarning($"Failed Loading embedded model {targetName}: sourceGeometryIndices.Count == 0");
                 return false;
             }
 
