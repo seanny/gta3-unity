@@ -32,6 +32,7 @@ namespace GTA3Unity.Vehicles
         [SerializeField] private float m_MaxSteeringAngle = 30.0f;
         [SerializeField] private float m_MaxMotorTorque = 1_500.0f;
         [SerializeField] private float m_MaxBrakeTorque = 2_500.0f;
+        [SerializeField] private float m_MaxHandbrakeTorque = 20_000.0f;
         [SerializeField] private float m_SteeringResponse = 5.0f;
 
         private readonly List<WheelCollider> m_Wheels = new();
@@ -40,6 +41,7 @@ namespace GTA3Unity.Vehicles
 
         private Vector2 m_MoveInput;
         private float m_Steering;
+        protected bool m_IsHandbrakeOn;
 
         protected override void Start()
         {
@@ -49,6 +51,8 @@ namespace GTA3Unity.Vehicles
 
         public override void OnInput(StarterAssetsInputs input)
         {
+            SetHandbrakeInput(input);
+
             m_MoveInput = input == null
                 ? Vector2.zero
                 : Vector2.ClampMagnitude(input.move, 1.0f);
@@ -91,12 +95,14 @@ namespace GTA3Unity.Vehicles
             {
                 WheelCollider wheel = m_Wheels[i];
                 bool isFrontWheel = i < FrontWheelCount;
+                bool isHandbrakeWheel = !isFrontWheel;
 
                 wheel.steerAngle = isFrontWheel ? steeringAngle : 0.0f;
-                wheel.motorTorque = IsDrivenWheel(i)
+                wheel.motorTorque = !m_IsHandbrakeOn && IsDrivenWheel(i)
                     ? gasPedal * m_MaxMotorTorque
                     : 0.0f;
-                wheel.brakeTorque = brakePedal * m_MaxBrakeTorque;
+                wheel.brakeTorque = brakePedal * m_MaxBrakeTorque +
+                    (m_IsHandbrakeOn && isHandbrakeWheel ? m_MaxHandbrakeTorque : 0.0f);
 
                 UpdateWheelVisual(i, wheel);
             }
@@ -166,6 +172,11 @@ namespace GTA3Unity.Vehicles
             wheelVisual.SetPositionAndRotation(
                 position,
                 rotation * m_WheelVisualRotationOffsets[wheelIndex]);
+        }
+
+        protected void SetHandbrakeInput(StarterAssetsInputs input)
+        {
+            m_IsHandbrakeOn = input != null && input.handBrake;
         }
     }
 }
