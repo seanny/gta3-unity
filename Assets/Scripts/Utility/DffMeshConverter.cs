@@ -296,6 +296,8 @@ namespace GTA3Unity.Utility
             {
                 Geometry geometry =
                     clump.GeometryList.Geometries[geometryIndex];
+                string geometryName =
+                    GetGeometryName(clump, modelName, geometryIndex);
 
                 Mesh mesh;
 
@@ -303,7 +305,8 @@ namespace GTA3Unity.Utility
                 {
                     mesh = CreateMesh(
                         geometry,
-                        $"{modelName}_Geometry_{geometryIndex}");
+                        geometryName);
+                    Debug.Log($"Spawned geometry '{geometryName}'");
                 }
                 catch (Exception exception)
                 {
@@ -322,7 +325,7 @@ namespace GTA3Unity.Utility
                 }
 
                 GameObject geometryObject =
-                    new GameObject($"{modelName}_Geometry_{geometryIndex}");
+                    new GameObject(geometryName);
 
                 geometryObject.transform.SetParent(
                     rootObject.transform,
@@ -404,6 +407,8 @@ namespace GTA3Unity.Utility
                 Geometry geometry =
                     clump.GeometryList.Geometries[geometryIndex];
                 Atomic atomic = FindAtomicForGeometry(clump, geometryIndex);
+                string geometryName =
+                    GetGeometryName(clump, modelName, geometryIndex);
                 SkinPlugin skin = GetExtension<SkinPlugin>(geometry.Extension);
 
                 Mesh mesh;
@@ -414,10 +419,10 @@ namespace GTA3Unity.Utility
                         ? CreateSkinnedMesh(
                             geometry,
                             skin,
-                            $"{modelName}_Geometry_{geometryIndex}")
+                            geometryName)
                         : CreateMesh(
                             geometry,
-                            $"{modelName}_Geometry_{geometryIndex}");
+                            geometryName);
                 }
                 catch (Exception exception)
                 {
@@ -436,7 +441,7 @@ namespace GTA3Unity.Utility
                 }
 
                 GameObject geometryObject =
-                    new GameObject($"{modelName}_Geometry_{geometryIndex}");
+                    new GameObject(geometryName);
 
                 Transform parent = skin != null
                     ? rootObject.transform
@@ -625,6 +630,24 @@ namespace GTA3Unity.Utility
             }
 
             return null;
+        }
+
+        private static string GetGeometryName(
+            Clump clump,
+            string modelName,
+            int geometryIndex)
+        {
+            Atomic atomic = FindAtomicForGeometry(clump, geometryIndex);
+            FrameList frameList = clump?.FrameList;
+
+            if (atomic != null &&
+                frameList?.Frames != null &&
+                atomic.FrameIndex < frameList.Frames.Count)
+            {
+                return GetFrameName(frameList, (int)atomic.FrameIndex);
+            }
+
+            return $"{modelName}_Geometry_{geometryIndex}";
         }
 
         private static Matrix4x4[] CreateBindPoses(Transform[] bones, Transform meshTransform)
