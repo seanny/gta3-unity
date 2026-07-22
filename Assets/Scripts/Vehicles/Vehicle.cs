@@ -65,5 +65,25 @@ namespace GTA3Unity.Vehicles
         }
 
         public abstract void OnInput(StarterAssetsInputs input);
+
+        protected override GameObject InstantiateModel(int modelIndex)
+        {
+            GameObject template = FileLoader.Instance.GetModel(modelIndex);
+
+            if (template == null)
+            {
+                Debug.LogWarning($"Could not load model {modelIndex}.");
+                return null;
+            }
+
+            var spawnedModel = GameObject.Instantiate<GameObject>(template);
+            spawnedModel.name = template.name.Replace("_Template", string.Empty);
+            spawnedModel.transform.SetParent(transform, worldPositionStays: false);
+            spawnedModel.transform.localPosition = s_ModelBasisPosition;
+            spawnedModel.transform.localRotation = Quaternion.identity;
+            spawnedModel.transform.localScale = Vector3.one;
+            spawnedModel.SetActive(true);
+            return spawnedModel;
+        }
     }
 }

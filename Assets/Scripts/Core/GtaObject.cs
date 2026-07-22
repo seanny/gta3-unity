@@ -1,10 +1,11 @@
+using GTA3Unity.Vehicles;
 using UnityEngine;
 
 namespace GTA3Unity.Core
 {
     public class GtaObject : MonoBehaviour
     {
-        private static readonly Vector3 s_ModelBasisPosition = new Vector3(0, 1.0f, 0.0f);
+        protected static readonly Vector3 s_ModelBasisPosition = new Vector3(0, 1.0f, 0.0f);
         private static readonly Quaternion s_ModelBasisRotation = Quaternion.Euler(-90.0f, 180.0f, 0.0f);
 
         protected GameObject m_PedModel;
@@ -24,7 +25,7 @@ namespace GTA3Unity.Core
             m_PedModel = InstantiateModel(modelIndex);
         }
 
-        protected GameObject InstantiateModel(int modelIndex)
+        protected virtual GameObject InstantiateModel(int modelIndex)
         {
             GameObject template = FileLoader.Instance.GetModel(modelIndex);
 
