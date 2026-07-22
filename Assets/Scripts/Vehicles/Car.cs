@@ -123,6 +123,40 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
+            List<Renderer> lod0Renderers = new();
+            List<Renderer> lod1Renderers = new();
+            Renderer[] modelRenderers = m_PedModel.GetComponentsInChildren<Renderer>(true);
+            for(int i = 0; i < modelRenderers.Length; i++)
+            {
+                Renderer renderer = modelRenderers[i];
+                if(renderer.gameObject.name.EndsWith("_hi", StringComparison.OrdinalIgnoreCase))
+                {
+                    lod0Renderers.Add(renderer);
+                }
+                else if(renderer.gameObject.name.EndsWith("_vlo", StringComparison.OrdinalIgnoreCase))
+                {
+                    lod1Renderers.Add(renderer);
+                }
+            }
+
+            if(lod0Renderers.Count > 0 && lod1Renderers.Count > 0)
+            {
+                LODGroup lodGroup = m_PedModel.GetComponent<LODGroup>();
+                if(lodGroup == null)
+                {
+                    lodGroup = m_PedModel.AddComponent<LODGroup>();
+                }
+                lodGroup.fadeMode = LODFadeMode.CrossFade;
+                lodGroup.animateCrossFading = true;
+
+                lodGroup.SetLODs(new[]
+                {
+                    new LOD(0.8f, lod0Renderers.ToArray()),
+                    new LOD(0.1f, lod1Renderers.ToArray())
+                });
+                lodGroup.RecalculateBounds();
+            }
+
             Transform[] wheelFrames = new Transform[WheelCount];
             Vector3[] wheelPositions = new Vector3[WheelCount];
             for(int i = 0; i < WheelCount; i++)
