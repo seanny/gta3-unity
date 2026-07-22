@@ -6,12 +6,6 @@ namespace GTA3Unity.Vehicles
 {
     public class Car: Vehicle
     {
-        private enum EDriveType
-        {
-            FrontWheel,
-            BackWheel,
-            BothWheel
-        }
 
         // Anything above or below these values and wheels start to go crazy
         private const float MIN_SUSPENSION = 10_000f;
