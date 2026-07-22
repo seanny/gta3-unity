@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -35,31 +38,163 @@ namespace GTA3Unity.Vehicles
         public float SeatOffsetDistance;
         public float CollisionDamageMultiplier;
         public int MonetaryValue; // Apparently determines how much the crusher give the player
-        public int FrontLights; // What does this even do?
-        public int RearLights; // What does this even do too?
+        public float SuspensionUpperLimit;
+        public float SuspensionLowerLimit;
+        public float SuspensionBias;
+        public uint Flags; // Hex-encoded handling flags
+        public int FrontLights; // 0 = long, 1 = small, 2 = big, 3 = tall
+        public int RearLights; // 0 = long, 1 = small, 2 = big, 3 = tall
+
+        public override string ToString()
+        {
+            return $"{VehicleIdentifier}, Mass: {Mass}kg, Dimensions: {Dimensions}, Centre of mass: {CentreOfMass}, " +
+                $"Percent submerged: {PercentSubmerged}%, Traction multiplier: {TractionMultiplier}, " +
+                $"Traction loss: {TractionLoss}, Traction bias: {TractionBias}, Gears: {TransmissionData.NumberOfGears}, " +
+                $"Max velocity: {TransmissionData.MaxVelocity}, Engine acceleration: {TransmissionData.EngineAcceleration}, " +
+                $"Drive type: {TransmissionData.DriveType}, Engine type: {TransmissionData.EngineType}, " +
+                $"Brake deceleration: {BrakeDeceleration}, Brake bias: {BrakeBias}, ABS: {ABS}, " +
+                $"Steering lock: {SteeringLock}, Suspension force: {SuspensionForceLevel}, " +
+                $"Suspension damping: {SuspensionDampingLevel}, Seat offset: {SeatOffsetDistance}, " +
+                $"Collision damage multiplier: {CollisionDamageMultiplier}, Monetary value: {MonetaryValue}, " +
+                $"Suspension upper limit: {SuspensionUpperLimit}, Suspension lower limit: {SuspensionLowerLimit}, " +
+                $"Suspension bias: {SuspensionBias}, Flags: 0x{Flags:X}, Front lights: {FrontLights}, Rear lights: {RearLights}";
+        }
+
     }
 
     public static class HandlingManager
     {
+        private const int HandlingFieldCount = 32;
+        private static readonly Dictionary<string, HandlingData> s_HandlingData =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        public static IReadOnlyDictionary<string, HandlingData> Data => s_HandlingData;
+
+        public static bool TryGetHandlingData(
+            string vehicleIdentifier,
+            out HandlingData handlingData)
+        {
+            return s_HandlingData.TryGetValue(vehicleIdentifier, out handlingData);
+        }
+
         public static void LoadHandlingData(string handlingCfg)
         {
-            if(!File.Exists(handlingCfg))
+            if (!File.Exists(handlingCfg))
             {
                 Debug.LogError($"Failed to load \"{handlingCfg}\": File does not exist!");
                 return;
             }
 
+            s_HandlingData.Clear();
+
             string[] lines = File.ReadAllLines(handlingCfg);
-            foreach(var line in lines)
+            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
             {
-                if(line.StartsWith(';'))
+                string line = lines[lineIndex];
+                int commentIndex = line.IndexOf(';');
+                if (commentIndex >= 0)
                 {
-                    // ; is a comment
+                    line = line.Substring(0, commentIndex);
+                }
+
+                line = line.Trim();
+                if (string.IsNullOrWhiteSpace(line))
+                {
                     continue;
                 }
 
-                // TODO: Implement handling.cfg reading
+                string[] parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length != HandlingFieldCount)
+                {
+                    Debug.LogWarning($"Skipping handling.cfg line {lineIndex + 1}: " +$"expected {HandlingFieldCount} fields, got {parts.Length}.");
+                    continue;
+                }
+
+                try
+                {
+                    HandlingData handlingData = new()
+                    {
+                        VehicleIdentifier = parts[0],
+                        Mass = ParseFloat(parts[1]),
+                        Dimensions = new Vector3(ParseFloat(parts[2]), ParseFloat(parts[3]), ParseFloat(parts[4])),
+                        CentreOfMass = new Vector3(ParseFloat(parts[5]), ParseFloat(parts[6]), ParseFloat(parts[7])),
+                        PercentSubmerged = ParseInt(parts[8]),
+                        TractionMultiplier = ParseFloat(parts[9]),
+                        TractionLoss = ParseFloat(parts[10]),
+                        TractionBias = ParseFloat(parts[11]),
+                        TransmissionData = new TransmissionData
+                        {
+                            NumberOfGears = ParseInt(parts[12]),
+                            MaxVelocity = ParseFloat(parts[13]),
+                            EngineAcceleration = ParseFloat(parts[14]),
+                            DriveType = ParseDriveType(parts[15]),
+                            EngineType = ParseEngineType(parts[16])
+                        },
+                        BrakeDeceleration = ParseFloat(parts[17]),
+                        BrakeBias = ParseFloat(parts[18]),
+                        ABS = ParseFloat(parts[19]),
+                        SteeringLock = ParseFloat(parts[20]),
+                        SuspensionForceLevel = ParseFloat(parts[21]),
+                        SuspensionDampingLevel = ParseFloat(parts[22]),
+                        SeatOffsetDistance = ParseFloat(parts[23]),
+                        CollisionDamageMultiplier = ParseFloat(parts[24]),
+                        MonetaryValue = ParseInt(parts[25]),
+                        SuspensionUpperLimit = ParseFloat(parts[26]),
+                        SuspensionLowerLimit = ParseFloat(parts[27]),
+                        SuspensionBias = ParseFloat(parts[28]),
+                        Flags = ParseFlags(parts[29]),
+                        FrontLights = ParseInt(parts[30]),
+                        RearLights = ParseInt(parts[31])
+                    };
+
+#if UNITY_EDITOR
+                    Debug.Log(handlingData.ToString());
+#endif
+                    s_HandlingData[handlingData.VehicleIdentifier] = handlingData;
+                }
+                catch (Exception exception) when (exception is FormatException || exception is OverflowException)
+                {
+                    Debug.LogWarning($"Skipping handling.cfg line {lineIndex + 1}: {exception.Message}");
+                }
             }
+        }
+
+        private static float ParseFloat(string value)
+        {
+            return float.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
+
+        private static int ParseInt(string value)
+        {
+            return int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+        }
+
+        private static uint ParseFlags(string value)
+        {
+            return uint.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        }
+
+        private static EDriveType ParseDriveType(string value)
+        {
+            return value.ToUpperInvariant() switch
+            {
+                "F" => EDriveType.FrontWheel,
+                "R" => EDriveType.BackWheel,
+                "4" => EDriveType.BothWheel,
+                _ => throw new FormatException($"Unknown drive type '{value}'.")
+            };
+        }
+
+        private static EEngineType ParseEngineType(string value)
+        {
+            return value.ToUpperInvariant() switch
+            {
+                "P" => EEngineType.Petrol,
+                "D" => EEngineType.Diesel,
+                "E" => EEngineType.Electric,
+                _ => throw new FormatException($"Unknown engine type '{value}'.")
+            };
         }
     }
 }

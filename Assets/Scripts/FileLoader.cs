@@ -13,6 +13,7 @@ using RenderWareIo.Structs.Ide;
 using RenderWareIo.Structs.Ifp;
 using Unity.AI.Navigation;
 using GTA3Unity.UI;
+using GTA3Unity.Vehicles;
 
 namespace GTA3Unity
 {
@@ -264,6 +265,7 @@ namespace GTA3Unity
             // TODO: Load Audio
             // TODO: Load data/pedstats.dat
             // TODO: Load data/timecyc.dat
+            HandlingManager.LoadHandlingData(Path.Combine(GameManager.Instance.GtaDirectory, "data", "handling.cfg"));
             LoadPedAnimations();
             MeshSpawn.ClearCache();
             LoadDataFiles();

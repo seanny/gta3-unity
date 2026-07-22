@@ -59,10 +59,7 @@ namespace GTA3Unity.Vehicles
                 return;
             }
 
-            m_Steering = Mathf.MoveTowards(
-                m_Steering,
-                -m_MoveInput.x,
-                Mathf.Max(0.0f, m_SteeringResponse) * Time.fixedDeltaTime);
+            m_Steering = Mathf.MoveTowards(m_Steering, -m_MoveInput.x, Mathf.Max(0.0f, m_SteeringResponse) * Time.fixedDeltaTime);
 
             float steeringValue = m_Steering * Mathf.Abs(m_Steering);
             float steeringAngle = steeringValue * m_MaxSteeringAngle;
