@@ -8,7 +8,7 @@ using UnityEngine;
 namespace RenderWareIo.Structs.Ide
 {
     [Serializable]
-    public struct Car : IIdeEntity<Car>
+    public struct Car : IIdeEntity<Car>, IModelTxd
     {
         public int Id;
         public string ModelName;
@@ -24,6 +24,9 @@ namespace RenderWareIo.Structs.Ide
         public int WheelModelId;
         public float WheelScale;
         public int LODModel;
+
+        string IModelTxd.ModelName => ModelName;
+        string IModelTxd.TxdName => TxdName;
 
 
         public Car Read(string line)

@@ -102,6 +102,18 @@ namespace GTA3Unity
             }
 
             // Load model into memory for use
+            foreach(var car in m_Cars)
+            {
+                if(car.Id == modelIndex)
+                {
+                    return MeshSpawn.GetOrCreateTemplate<RenderWareIo.Structs.Ide.Car>(
+                        modelIndex,
+                        car,
+                        m_MainImg,
+                        m_FallbackMaterial,
+                        m_TxdMaterialCache);
+                }
+            }
             foreach(var ideObject in m_Peds)
             {
                 if(ideObject.Id == modelIndex)
@@ -117,6 +129,27 @@ namespace GTA3Unity
                 }
             }
             return null;
+        }
+
+        public bool TryGetCarDefinition(
+            string handlingIdentifier,
+            out RenderWareIo.Structs.Ide.Car car)
+        {
+            for(int i = 0; i < m_Cars.Count; i++)
+            {
+                RenderWareIo.Structs.Ide.Car candidate = m_Cars[i];
+                if(string.Equals(
+                    candidate.HandlingId,
+                    handlingIdentifier,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    car = candidate;
+                    return true;
+                }
+            }
+
+            car = default;
+            return false;
         }
 
         public bool TryGetRandomPedModelIndex(out int modelIndex)
@@ -310,6 +343,7 @@ namespace GTA3Unity
                     string path = Path.Combine(GameManager.Instance.GtaDirectory, StringExt.ReplaceInvalidSlash(ide));
                     IdeFile ideFile = new(path);
                     m_Objects.AddRange(ideFile.Ide.Objs);
+                    m_Cars.AddRange(ideFile.Ide.Cars);
                     m_TxdMaterialCache.RegisterTxdParents(ideFile.Ide.Txdps);
                     m_Peds.AddRange(ideFile.Ide.Peds);
                 }

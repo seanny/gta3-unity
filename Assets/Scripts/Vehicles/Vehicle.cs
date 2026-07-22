@@ -21,7 +21,7 @@ namespace GTA3Unity.Vehicles
         {
             m_RigidBody = GetComponent<Rigidbody>();
             Debug.Assert(m_RigidBody != null);
-            if(!string.IsNullOrEmpty(m_VehicleIdentifier))
+            if(!string.IsNullOrEmpty(m_VehicleIdentifier) && HandlingManager.Data.Count > 0)
             {
                 // Allow testing in the editor
                 SetHandlingData(m_VehicleIdentifier);
@@ -30,20 +30,31 @@ namespace GTA3Unity.Vehicles
 
         public bool SetHandlingData(string vehicleIdentifier)
         {
-            Debug.Assert(HandlingManager.Data.Count > 0);
-
-            if(!HandlingManager.Data.ContainsKey(vehicleIdentifier))
+            if(!HandlingManager.Data.TryGetValue(vehicleIdentifier, out HandlingData handlingData))
             {
                 return false;
             }
             m_VehicleIdentifier = vehicleIdentifier;
-            m_HandlingData = HandlingManager.Data[vehicleIdentifier];
+            m_HandlingData = handlingData;
             return true;
         }
 
         public override void SetModel(int modelIndex)
         {
             base.SetModel(modelIndex);
+
+            if(m_PedModel == null)
+            {
+                return;
+            }
+
+            // Vehicle bodies use WheelColliders for physics. Concave MeshColliders
+            // cannot be attached to their dynamic Rigidbody.
+            MeshCollider[] meshColliders = m_PedModel.GetComponentsInChildren<MeshCollider>(true);
+            for(int i = 0; i < meshColliders.Length; i++)
+            {
+                meshColliders[i].enabled = false;
+            }
         }
 
         public void SetDriver(PedObject ped)
