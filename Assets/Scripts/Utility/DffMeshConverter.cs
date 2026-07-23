@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GTA3Unity.Core;
 using GTA3Unity.Utility;
 using RenderWareIo;
 using RenderWareIo.Structs.Dff;
@@ -268,6 +269,22 @@ namespace GTA3Unity.Utility
             return Quaternion.LookRotation(forward.normalized, up.normalized);
         }
 
+        private static Quaternion ConvertVehicleFrameRotation(Frame frame)
+        {
+            // RenderWare vehicle frames use right, forward, up axes. Convert
+            // the forward and up axes in that order so an identity GTA frame
+            // remains an identity Unity frame.
+            Vector3 up = ConvertVector(frame.Rot3);
+            Vector3 forward = ConvertVector(frame.Rot2);
+
+            if (up.sqrMagnitude < 0.0001f || forward.sqrMagnitude < 0.0001f)
+            {
+                return Quaternion.identity;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, up.normalized);
+        }
+
         private static GameObject CreateMapDffGameObject(
             DffFile dffFile,
             string modelName,
@@ -289,6 +306,14 @@ namespace GTA3Unity.Utility
             rootObject.transform.localPosition = Vector3.zero;
             rootObject.transform.localRotation = Quaternion.identity;
             rootObject.transform.localScale = Vector3.one;
+
+            BuildFrameHierarchy(
+                rootObject,
+                clump,
+                applyFramePositions: true,
+                addDummyObjects: true);
+
+            bool hasRenderableGeometry = false;
 
             for (int geometryIndex = 0;
                  geometryIndex < clump.GeometryList.Geometries.Count;
@@ -348,6 +373,8 @@ namespace GTA3Unity.Utility
                 meshFilter.sharedMesh = mesh;
                 meshRenderer.sharedMaterials = materials;
 
+                hasRenderableGeometry = true;
+
                 // Temporary measure until I implement GTA collisions
                 if(!modelName.Contains("wheel", StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -361,7 +388,7 @@ namespace GTA3Unity.Utility
                 geometryObject.SetActive(true);
             }
 
-            if (rootObject.transform.childCount == 0)
+            if (!hasRenderableGeometry)
             {
                 DestroyGameObject(rootObject);
                 Debug.LogWarning($"DFF '{modelName}' did not produce any renderable geometry.");
@@ -702,7 +729,8 @@ namespace GTA3Unity.Utility
         private static DffFrameContext BuildFrameHierarchy(
             GameObject rootObject,
             Clump clump,
-            bool applyFramePositions)
+            bool applyFramePositions,
+            bool addDummyObjects = false)
         {
             FrameList frameList = clump.FrameList;
             int frameCount = frameList?.Frames?.Count ?? 0;
@@ -712,6 +740,12 @@ namespace GTA3Unity.Utility
             {
                 string frameName = GetFrameName(frameList, frameIndex);
                 GameObject frameObject = new GameObject(frameName);
+
+                if (addDummyObjects && IsDummyFrame(clump, frameIndex, frameName))
+                {
+                    frameObject.AddComponent<DummyObject>();
+                }
+
                 transforms[frameIndex] = frameObject.transform;
             }
 
@@ -727,13 +761,54 @@ namespace GTA3Unity.Utility
                 transforms[frameIndex].localPosition = applyFramePositions
                     ? ConvertVector(frame.Position)
                     : Vector3.zero;
-                transforms[frameIndex].localRotation = ConvertFrameRotation(frame);
+                transforms[frameIndex].localRotation = addDummyObjects
+                    ? ConvertVehicleFrameRotation(frame)
+                    : ConvertFrameRotation(frame);
                 transforms[frameIndex].localScale = Vector3.one;
             }
 
             return new DffFrameContext(
                 transforms,
                 FindHierarchy(frameList));
+        }
+
+        private static bool IsDummyFrame(
+            Clump clump,
+            int frameIndex,
+            string frameName)
+        {
+            if (string.IsNullOrEmpty(frameName))
+            {
+                return false;
+            }
+
+            if (frameName.EndsWith("_dummy", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "headlights", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "taillights", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "reverselights", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "brakelights", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "indicators", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "indicators_front", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "indicators_back", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(frameName, "exhaust", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (clump?.Atomics == null)
+            {
+                return true;
+            }
+
+            foreach (Atomic atomic in clump.Atomics)
+            {
+                if (atomic != null && atomic.FrameIndex == (uint)frameIndex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static string GetFrameName(FrameList frameList, int frameIndex)

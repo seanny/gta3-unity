@@ -10,6 +10,8 @@ namespace GTA3Unity.Vehicles
     public class Car : Vehicle
     {
         private static readonly Quaternion s_DefaultVehicleRotation = Quaternion.Euler(270,-180,0);
+        private static readonly Quaternion s_WheelColliderRotationCorrection =
+            Quaternion.Euler(0.0f, 180.0f, 0.0f);
         
         private const int WheelCount = 4;
         private const int FrontWheelCount = 2;
@@ -157,8 +159,9 @@ namespace GTA3Unity.Vehicles
                 lodGroup.RecalculateBounds();
             }
 
+            ConfigureChassisCollision();
+
             Transform[] wheelFrames = new Transform[WheelCount];
-            Vector3[] wheelPositions = new Vector3[WheelCount];
             for(int i = 0; i < WheelCount; i++)
             {
                 wheelFrames[i] = FindChildByName(m_PedModel.transform, s_WheelFrameNames[i]);
@@ -168,12 +171,11 @@ namespace GTA3Unity.Vehicles
                         $"Vehicle '{VehicleIdentifier}' is missing the wheel frame '{s_WheelFrameNames[i]}'.");
                     return;
                 }
-
-                wheelPositions[i] = transform.InverseTransformPoint(wheelFrames[i].position);
             }
 
             ConfigureRigidbody();
-            CreateWheels(ideCar, wheelFrames, wheelPositions);
+            CreateWheels(ideCar, wheelFrames);
+            LoadVehicleDummy();
             m_IsInitialized = true;
         }
 
@@ -193,8 +195,7 @@ namespace GTA3Unity.Vehicles
 
         private void CreateWheels(
             IdeCar ideCar,
-            Transform[] wheelFrames,
-            Vector3[] wheelPositions)
+            Transform[] wheelFrames)
         {
             m_WheelRadius = ideCar.WheelScale * 0.5f;
 
@@ -248,10 +249,9 @@ namespace GTA3Unity.Vehicles
                 bool isFrontWheel = i < FrontWheelCount;
                 GameObject wheelAnchor = new GameObject($"WheelCollider_{s_WheelFrameNames[i]}");
                 wheelAnchor.transform.SetParent(transform, false);
-                wheelAnchor.transform.localPosition = wheelPositions[i];
-
-                // GTA vehicle models use the opposite forward axis to the Unity vehicle root.
-                wheelAnchor.transform.localRotation = Quaternion.Euler(0.0f, 180.0f, 0.0f);
+                wheelAnchor.transform.SetPositionAndRotation(
+                    wheelFrames[i].position,
+                    wheelFrames[i].rotation * s_WheelColliderRotationCorrection);
 
                 WheelCollider wheel = wheelAnchor.AddComponent<WheelCollider>();
                 wheel.radius = m_WheelRadius;
@@ -274,13 +274,85 @@ namespace GTA3Unity.Vehicles
                 wheel.sidewaysFriction = CreateFrictionCurve(
                     Mathf.Max(0.01f, HandlingData.TractionMultiplier) * axleGripBias);
 
-                wheelFrames[i].gameObject.SetActive(false);
                 m_Wheels[i] = wheel;
-                CreateWheelVisual(i, wheelAnchor.transform, ideCar.WheelModelId);
+                CreateWheelVisual(
+                    i,
+                    wheelAnchor.transform,
+                    ideCar.WheelModelId,
+                    ideCar.WheelScale);
             }
         }
 
-        private void CreateWheelVisual(int wheelIndex, Transform wheelAnchor, int wheelModelId)
+        private void ConfigureChassisCollision()
+        {
+            MeshFilter chassisMesh = FindMeshFilterByName(
+                m_PedModel.transform,
+                "chassis_vlo");
+
+            if(chassisMesh == null || chassisMesh.sharedMesh == null)
+            {
+                Debug.LogWarning(
+                    $"Vehicle '{VehicleIdentifier}' has no chassis_vlo mesh for collision.");
+                return;
+            }
+
+            MeshCollider chassisCollider =
+                chassisMesh.GetComponent<MeshCollider>();
+            if(chassisCollider == null)
+            {
+                chassisCollider = chassisMesh.gameObject.AddComponent<MeshCollider>();
+            }
+
+            chassisCollider.sharedMesh = chassisMesh.sharedMesh;
+            chassisCollider.convex = true;
+            chassisCollider.enabled = true;
+        }
+
+        private void LoadVehicleDummy()
+        {
+            LoadHeadlights();
+            LoadTaillights();
+            LoadReverseLights();
+            LoadBrakeLights();
+            LoadIndicators();
+            LoadExhaust();
+        }
+
+        private void LoadHeadlights()
+        {
+            // TODO: Implement headlights.
+        }
+
+        private void LoadTaillights()
+        {
+            // TODO: Implement taillights.
+        }
+
+        private void LoadReverseLights()
+        {
+            // TODO: Implement reverse lights.
+        }
+
+        private void LoadBrakeLights()
+        {
+            // TODO: Implement brake lights.
+        }
+
+        private void LoadIndicators()
+        {
+            // TODO: Implement indicators.
+        }
+
+        private void LoadExhaust()
+        {
+            // TODO: Implement exhaust effects.
+        }
+
+        private void CreateWheelVisual(
+            int wheelIndex,
+            Transform wheelAnchor,
+            int wheelModelId,
+            float wheelScale)
         {
             if(wheelModelId <= 0)
             {
@@ -300,6 +372,7 @@ namespace GTA3Unity.Vehicles
             wheelVisual.transform.SetParent(wheelAnchor, false);
             wheelVisual.transform.localPosition = Vector3.zero;
             wheelVisual.transform.localRotation = visualRotation;
+            wheelVisual.transform.localScale = Vector3.one * Mathf.Max(0.01f, wheelScale);
 
             m_WheelVisuals[wheelIndex] = wheelVisual.transform;
             m_WheelVisualRotationOffsets[wheelIndex] = visualRotation;
@@ -314,7 +387,7 @@ namespace GTA3Unity.Vehicles
 
             m_SteeringInput = Mathf.MoveTowards(
                 m_SteeringInput,
-                -m_MoveInput.x,
+                m_MoveInput.x,
                 SteeringResponse * Time.fixedDeltaTime);
 
             float steeringValue = m_SteeringInput * Mathf.Abs(m_SteeringInput);
@@ -405,6 +478,29 @@ namespace GTA3Unity.Vehicles
             for(int i = 0; i < root.childCount; i++)
             {
                 Transform match = FindChildByName(root.GetChild(i), targetName);
+                if(match != null)
+                {
+                    return match;
+                }
+            }
+
+            return null;
+        }
+
+        private static MeshFilter FindMeshFilterByName(
+            Transform root,
+            string targetName)
+        {
+            MeshFilter meshFilter = root.GetComponent<MeshFilter>();
+            if(meshFilter != null &&
+                string.Equals(root.name, targetName, StringComparison.OrdinalIgnoreCase))
+            {
+                return meshFilter;
+            }
+
+            for(int i = 0; i < root.childCount; i++)
+            {
+                MeshFilter match = FindMeshFilterByName(root.GetChild(i), targetName);
                 if(match != null)
                 {
                     return match;
