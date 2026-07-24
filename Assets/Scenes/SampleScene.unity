@@ -149,6 +149,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 2108010156}
   - {fileID: 1167887075}
   - {fileID: 304623873}
   - {fileID: 131694819}
@@ -1853,6 +1854,80 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &532789612
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 532789615}
+  - component: {fileID: 532789614}
+  - component: {fileID: 532789613}
+  m_Layer: 0
+  m_Name: Landstalker Test
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &532789613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532789612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4c8f05fc2e3ed94692e6ec1f13cab8c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Vehicles.Car
+  m_VehicleIdentifier: LANDSTAL
+  m_Driver: {fileID: 0}
+--- !u!54 &532789614
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532789612}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!4 &532789615
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532789612}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 910.7778, y: 14.272698, z: -407.6397}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &571158234
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4466,6 +4541,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4923ac39913b5d478a2e53311c6e708, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTA3Unity.Core.PlayerController
+  m_PedState: 0
   MoveSpeed: 1
   SprintSpeed: 10
   RotationSmoothTime: 0.12
@@ -4507,6 +4583,7 @@ MonoBehaviour:
   look: {x: 0, y: 0}
   jump: 0
   sprint: 0
+  handBrake: 0
   analogMovement: 0
   cursorLocked: 1
   cursorInputForLook: 1
@@ -5142,6 +5219,140 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!1001 &2108010155
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 24230162}
+    m_Modifications:
+    - target: {fileID: 1177369113364993682, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_text
+      value: Debug Scene
+      objectReference: {fileID: 0}
+    - target: {fileID: 1214528908189300048, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_Name
+      value: BtnDebugScene
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1131704189}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnStartDebugGame
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GTA3Unity.UI.MainMenu, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6334565153889939412, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 300
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 7.70203
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 473
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -210.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+--- !u!224 &2108010156 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 9172323101753462832, guid: 655024cc95bfe1547b75df1ce10ba890, type: 3}
+  m_PrefabInstance: {fileID: 2108010155}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2109165089
 GameObject:
   m_ObjectHideFlags: 0
@@ -5431,3 +5642,4 @@ SceneRoots:
   - {fileID: 1646601484}
   - {fileID: 26520104}
   - {fileID: 91193672}
+  - {fileID: 532789615}
