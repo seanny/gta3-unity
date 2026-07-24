@@ -16,6 +16,8 @@ namespace GTA3Unity.Vehicles
         [SerializeField] private PedObject m_Driver;
 
         protected Rigidbody m_RigidBody;
+        private CharacterController m_DriverController;
+        private bool m_DriverControllerWasEnabled;
 
         protected virtual void Start()
         {
@@ -59,9 +61,54 @@ namespace GTA3Unity.Vehicles
 
         public void SetDriver(PedObject ped)
         {
+            if(ped == null)
+            {
+                return;
+            }
+
+            if(m_Driver == ped)
+            {
+                return;
+            }
+
+            if(m_Driver != null)
+            {
+                ClearDriver();
+            }
+
             m_Driver = ped;
+            m_DriverController = ped.GetComponent<CharacterController>();
+            if(m_DriverController != null)
+            {
+                // A CharacterController parented to a dynamic vehicle can
+                // create an impulse during entry and fight the vehicle body.
+                m_DriverControllerWasEnabled = m_DriverController.enabled;
+                m_DriverController.enabled = false;
+            }
+
             ped.transform.SetParent(transform);
             ped.transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, transform.eulerAngles.z);
+        }
+
+        public void ClearDriver()
+        {
+            if(m_Driver == null)
+            {
+                return;
+            }
+
+            PedObject driver = m_Driver;
+            CharacterController driverController = m_DriverController;
+            bool driverControllerWasEnabled = m_DriverControllerWasEnabled;
+            m_Driver = null;
+            m_DriverController = null;
+            m_DriverControllerWasEnabled = false;
+
+            driver.transform.SetParent(null, worldPositionStays: true);
+            if(driverController != null)
+            {
+                driverController.enabled = driverControllerWasEnabled;
+            }
         }
 
         public abstract void OnInput(StarterAssetsInputs input);
